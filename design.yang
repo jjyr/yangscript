@@ -1,0 +1,39 @@
+a = 1
+#global
+a = \x, b -> x + b;
+
+b = [1,2,3].map a
+a, b = [b, a, 3]
+# a=> b, b=> a
+a,_, b = [b, a, 3]
+# a=> b, b=> 3
+
+b[1]
+b[1, 4]
+b[1, -1] = 1
+"asdasdasd"
+#defined?
+has(b,1)
+result, value = has_get(b, 1)
+#while a
+#;
+
+#keys(b) == keys(b, false)
+#keys(b, true)
+#get(b, 1)
+#set(b, 1)
+#b.xxx
+#nil
+let merge = \a, b
+  a = clone(a)
+  for k in keys(b)
+    if v = b.get(k)
+      a.set(k, b)
+    ;
+  ;
+;
+
+let User = \x -> merge({x: 1, g: 6, b: 2}, x);
+user = User({x:2})
+
+user.x
