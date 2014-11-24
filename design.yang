@@ -1,6 +1,6 @@
 a = 1
 #global
-a = \x, b -> x + b;
+a = fun(x, b) -> x + b;
 
 b = [1,2,3].map a
 a, b = [b, a, 3]
@@ -24,7 +24,7 @@ result, value = has_get(b, 1)
 #set(b, 1)
 #b.xxx
 #nil
-global.test_func = \a, b ->
+global.test_func = fun(a, b) ->
   a = clone(a)
   for k in keys(b)
     if v = b.get(k)
@@ -38,9 +38,9 @@ class Person
   include(BasePerson)
 #self == Person
   merge(self, {
-    hello: \self -> puts("hello every one!");,
-    init: \self -> puts("i'm initialized"),
-    say: \self ->
+    hello: fun(self) -> puts("hello every one!");,
+    init: fun(self) -> puts("i'm initialized"),
+    say: fun(self) ->
       if super.say
         super.say(self)
         #super == BasePerson
@@ -50,6 +50,9 @@ class Person
   })
 ;
 
+true
+false
+nil
 person = Person()
 person.favorite_programing_language ||= "yang"
 person.inherited_method # -> Person -> BasePerson -> Object
