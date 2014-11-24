@@ -24,7 +24,7 @@ result, value = has_get(b, 1)
 #set(b, 1)
 #b.xxx
 #nil
-let merge = \a, b
+global.test_func = \a, b ->
   a = clone(a)
   for k in keys(b)
     if v = b.get(k)
@@ -33,7 +33,24 @@ let merge = \a, b
   ;
 ;
 
-let User = \x -> merge({x: 1, g: 6, b: 2}, x);
-user = User({x:2})
+class Person
+  #include(Object)
+  include(BasePerson)
+#self == Person
+  merge(self, {
+    hello: \self -> puts("hello every one!");,
+    init: \self -> puts("i'm initialized"),
+    say: \self ->
+      if super.say
+        super.say(self)
+        #super == BasePerson
+      else
+        puts("nothing")
+      ;
+  })
+;
 
-user.x
+person = Person()
+person.favorite_programing_language ||= "yang"
+person.inherited_method # -> Person -> BasePerson -> Object
+(person.nihao || person.hello)()
