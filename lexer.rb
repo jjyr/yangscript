@@ -63,10 +63,14 @@ module Yang
               token = :lparen
             when ')'
               token = :rparen
-            when '{'
+            when '['
               token = :lbracket
-            when '}'
+            when ']'
               token = :rbracket
+            when '{'
+              token = :lbrace
+            when '}'
+              token = :rbrace
             when '+'
               token = :plus
             when '-'

@@ -2,7 +2,7 @@ a = 1
 #global
 a = fun(x, b) -> x + b;
 
-b = [1,2,3].map a
+b = [1,2,3].map(f)
 a, b = [b, a, 3]
 # a=> b, b=> a
 a,_, b = [b, a, 3]

@@ -2,7 +2,6 @@ module Yang
   RESERVED_WORDS = {
     "if" => :if,
     "else" => :else,
-    "elsif" => :elsif,
     "while" => :while,
     "break" => :break,
     "return" => :return,

@@ -40,10 +40,10 @@ module Yang
 
     def parse lexer
       @lexer = lexer
-      t = TreeNode.new
-      t = stmt_sequence
       @token_buffer = []
       next_token
+      t = TreeNode.new
+      t = stmt_sequence
       if token != :endfile
         puts "Code ends before file"
       end
@@ -51,7 +51,7 @@ module Yang
     end
 
     def match expected
-      if @token == expected
+      if token == expected
         next_token
       else
         syntax_error
@@ -59,7 +59,7 @@ module Yang
     end
 
     def is_stmt_sequence_end
-      @token == :endfile || @token == :rbracket #|| @token == :else #|| @token == :while
+      token == :endfile || token == :semi
     end
 
     def stmt_sequence
@@ -67,8 +67,7 @@ module Yang
       t = statement
       pt = t
       while !is_stmt_sequence_end
-        match_sep
-        match @token while @token == :semi || @token == :newline
+        match token while token == :newline
         break if is_stmt_sequence_end
         qt = statement
         if qt
@@ -110,14 +109,14 @@ module Yang
       match :lparen
       t.children[0] = exp
       match :rparen
-      match :lbracket
+      match :lbrace
       t.children[1] = stmt_sequence
-      match :rbracket
-      if @token == :else
+      match :rbrace
+      if token == :else
         match :else
-        match :lbracket
-        t.children[2] = stmt_sequence if @token != :rbracket
-        match :rbracket
+        match :lbrace
+        t.children[2] = stmt_sequence if @token != :rbrace
+        match :rbrace
       end
       t
     end
@@ -128,9 +127,9 @@ module Yang
       match :lparen
       t.children[0] = exp
       match :rparen
-      match :lbracket
-      t.children[1] = stmt_sequence if @token != :rbracket
-      match :rbracket
+      match :lbrace
+      t.children[1] = stmt_sequence if @token != :rbrace
+      match :rbrace
       t
     end
 
@@ -144,9 +143,9 @@ module Yang
       match :semi
       t.children[2] = exp
       match :rparen
-      match :lbracket
-      t.children[3] = stmt_sequence if @token != :rbracket
-      match :rbracket
+      match :lbrace
+      t.children[3] = stmt_sequence if @token != :rbrace
+      match :rbrace
       t
     end
 
@@ -198,30 +197,49 @@ module Yang
     def def_func_stmt
       t = stmt_node :def_func
       match :fun
-      if @token == :id
+      if token == :id
         t.attrs[:name] = @token_str
       end
       match :id
       t.attrs[:params] = def_func_parameters
       t.attrs[:arity] = t.attrs[:params].size
-      match :lbracket
-      if @token != :rbracket
+      match :lbrace
+      if token != :rbrace
         t.children[0] = stmt_sequence
       end
-      match :rbracket
+      match :rbrace
       t
     end
 
-    def def_func_parameters
+    def parse_function_param_list
       params = []
       match :lparen
-      while (@token != :rparen)
-        #FIXME
+      while (token != :rparen)
         match :comma if params.size != 0
-        params << something
+        params << token_str
+        match :id
       end
       match :rparen
       params
+    end
+
+    def parse_function
+      t = exp_node :literal
+      t.attrs[:literal_type] = :fun
+      match :fun
+      t.attrs[:params] = parse_function_param_list
+      match :dash
+      match :gt
+      t.children[0] = stmt_sequence
+      match :semi
+    end
+
+    def parse_array
+      t = exp_node :literal
+      t.attrs[:literal_type] = :array
+      match :lbracket
+      t.attrs[:val_list] = parse_exp_list
+      match :rbracket
     end
 
     def print_stmt
@@ -233,12 +251,12 @@ module Yang
 
     def exp
       t = simple_exp
-      if @token == :lt || @token == :gt || @token == :eq
+      if token == :lt || token == :gt || token == :eq
         np = exp_node :op
         np.children[0] = t
-        np.attrs[:op] = @token
+        np.attrs[:op] = token
         t = np
-        match @token
+        match token
         t.children[1] = simple_exp
       end
       t
@@ -281,12 +299,14 @@ module Yang
 
     def factor
       t = nil
-      case @token
+      case token
       when :nil
         t = exp_node :literal
         t.attrs[:literal_type] = :nil
         t.attrs[:val] = :nil
         match :nil
+      when :fun
+        parse_function
       when :num
         t = exp_node :literal
         t.attrs[:literal_type] = :num
@@ -296,6 +316,8 @@ module Yang
         t = exp_node :literal_bool
         t.attrs[:val] = token_str
         match token
+      when :lbracket
+        parse_array
       when :id
         t = nil
         match :id
@@ -329,7 +351,7 @@ module Yang
     end
 
     def next_token
-      unless @token_buffer.empty?
+      if @token_buffer.empty?
         @lexer.next_token
         @token, @token_str = @lexer.token, @lexer.token_str
       else

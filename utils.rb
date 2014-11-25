@@ -21,9 +21,9 @@ module Yang
 						puts "("
 					when :rparen
 						puts ")"
-					when :lbracket
+					when :lbrace
 						puts "{"
-					when :rbracket
+					when :rbrace
 						puts "}"
 					when :comma
 						puts ","
