@@ -161,23 +161,20 @@ module Yang
       t
     end
 
-    def parse_id
-      t = exp_node :id
-      t.attrs[:name] = token_str
-      match :id
-      case token
-      when :dot
-        match :dot
-        t.attrs[:key_id] = parse_id
+    def parse_assignable
+      t = factor
+      unless [:id, :access].include? t.exp
+        syntax_error
+        raise "not assignable value: #{t.inspect}"
       end
-      return t
+      t
     end
 
     def parse_assignment first_id
       id_list = [first_id]
       while token == :comma
         match :comma
-        id_list << parse_id
+        id_list << parse_assignable
       end
       match :assign
       right_values = parse_exp_list
@@ -297,6 +294,16 @@ module Yang
       t
     end
 
+
+    def parse_property_access obj_exp
+      t = exp_node :access
+      match :dot
+      t.attrs[:object] = obj_exp
+      t.attrs[:property] = token_str
+      match :id
+      t
+    end
+
     def factor
       t = nil
       case token
@@ -319,16 +326,9 @@ module Yang
       when :lbracket
         parse_array
       when :id
-        t = nil
+        t = exp_node :id
+        t.attrs[:name] = token_str
         match :id
-        if token == :comma || token == :assign
-          t = parse_assignment token_str
-        elsif token == :lparen
-          t = func_call token_str
-        else
-          t = exp_node :id
-          t.attrs[:name] = token_str
-        end
         t
       when :lparen
         match :lparen
@@ -339,10 +339,18 @@ module Yang
         next_token
       end
 
-      if token == :lparen
-        t = parse_func_call t
-      end
-
+      # FIXME need refactor operation priority
+      # loop do
+      #   if token == :dot
+      #     t = parse_property_access t
+      #   elsif token == :lparen
+      #     t = parse_func_call t
+      #   elsif token == :comma || token == :assign
+      #     t = parse_assignment t
+      #   else
+      #     break
+      #   end
+      # end
       t
     end
 
