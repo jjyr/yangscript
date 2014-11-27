@@ -125,7 +125,7 @@ module Yang
       when :print
         print_stmt
       else
-        parse_assignment_or_funtion_call
+        parse_assignment_or_exp
       end
     end
 
@@ -187,36 +187,28 @@ module Yang
       t
     end
 
-    def parse_assignment_or_funtion_call
-      id_name = suffixed_exp
-      if token == :assign || token == :comma
-        parse_assignment id_name
-      else
-        binding.pry
-        parse_function_call id_name
-      end
-    end
-
-    def parse_assignable
-      t = factor
-      unless [:id, :access].include? t.exp
-        syntax_error
-        raise "not assignable value: #{t.inspect}"
-      end
-      t
-    end
-
-    def parse_assignment first_id
-      id_list = [first_id]
+    def parse_assignment_or_exp
+      id_list = [exp]
       while token == :comma
         match :comma
-        id_list << parse_assignable
+        id_list << suffixed_exp
       end
+
+      if token == :assign
+        parse_assignment id_list
+      elsif id_list.size == 1
+        id_list[0]
+      else
+        syntax_error
+      end
+    end
+
+    def parse_assignment id_list
       match :assign
       right_values = parse_exp_list
       if id_list.size == 1
         t = exp_node :assign
-        t.attrs[:id] = first_id
+        t.attrs[:id] = id_list[0]
         t.attrs[:values] = right_values
         t
       else
@@ -313,6 +305,7 @@ module Yang
         op_node.children[0] = t
         op_node.children[1] = subexp(op_prior)
         t = op_node
+        op_prior = get_op_prior token
       end
       t
     end
@@ -340,13 +333,13 @@ module Yang
     end
 
     def factor
-      t = nil
       case token
       when :nil
         t = exp_node :literal
         t.attrs[:literal_type] = :nil
         t.attrs[:val] = :nil
         match :nil
+        t
       when :fun
         parse_function
       when :num
@@ -354,16 +347,17 @@ module Yang
         t.attrs[:literal_type] = :num
         t.attrs[:val] = token_str.to_i
         match :num
+        t
       when :true, :false
         t = exp_node :literal_bool
         t.attrs[:val] = token_str
         match token
+        t
       when :lbracket
         parse_array
       else
         suffixed_exp
       end
-      t
     end
 
     def primary_exp
