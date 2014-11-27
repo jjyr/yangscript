@@ -53,8 +53,6 @@ module Yang
             when nil
               save = false
               token = :endfile
-            when '='
-              token = :eq
             when '<'
               token = :lt
             when '>'
@@ -79,6 +77,8 @@ module Yang
               token = :star
             when '/'
               token = :slash
+            when '%'
+              token = :mod
             when ','
               token = :comma
             when '.'

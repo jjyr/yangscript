@@ -12,6 +12,24 @@ module Yang
     attr_accessor :stmt
   end
 
+  BINARY_OP_PRIOR = {
+    assign: 0,
+    or: 1,
+    and: 2,
+    lt: 3,
+    lte: 3,
+    gt: 3,
+    gte: 3,
+    eq: 3,
+    plus: 4,
+    dash: 4,
+    star: 5,
+    slash: 5,
+    mod: 5
+  }
+
+  UNARY_OP = [:plus, :dash]
+
   class ExpNode < TreeNode
     attr_accessor :exp
   end
@@ -29,6 +47,14 @@ module Yang
       node.exp = kind
       node.line_no = @lexer.line_no
       node
+    end
+
+    def get_op_prior op
+      BINARY_OP_PRIOR[op]
+    end
+
+    def is_unary_op op
+      UNARY_OP.include? op
     end
   end
 
@@ -99,7 +125,7 @@ module Yang
       when :print
         print_stmt
       else
-        exp
+        parse_assignment_or_funtion_call
       end
     end
 
@@ -161,6 +187,16 @@ module Yang
       t
     end
 
+    def parse_assignment_or_funtion_call
+      id_name = suffixed_exp
+      if token == :assign || token == :comma
+        parse_assignment id_name
+      else
+        binding.pry
+        parse_function_call id_name
+      end
+    end
+
     def parse_assignable
       t = factor
       unless [:id, :access].include? t.exp
@@ -208,6 +244,15 @@ module Yang
       t
     end
 
+    def parse_function_call fun_exp
+      t = exp_node :fun_call
+      match :lparen
+      t.attrs[:parameter_list] = parse_parameter_list
+      match :rparen
+      t.children[0] = fun_exp
+      t
+    end
+
     def parse_function_param_list
       params = []
       match :lparen
@@ -247,27 +292,27 @@ module Yang
     end
 
     def exp
-      t = simple_exp
-      if token == :lt || token == :gt || token == :eq
-        np = exp_node :op
-        np.children[0] = t
-        np.attrs[:op] = token
-        t = np
-        match token
-        t.children[1] = simple_exp
-      end
-      t
+      subexp(0)
     end
 
-    def simple_exp
+    def subexp limit
+      if is_unary_op(token)
+        match token
+        t = exp_node :op
+        t.attrs[:op] = token
+        t.children[0] = factor
+        return t
+      end
+
       t = factor
-      while @token == :plus || @token == :dash
-        np = exp_node :op
-        np.children[0] = t
-        np.attrs[:op] = @token
-        t = np
-        match @token
-        t.children[1] = factor
+      op_prior = get_op_prior token
+      while op_prior && op_prior > limit
+        op_node = exp_node :op
+        op_node.attrs[:op] = token
+        match token
+        op_node.children[0] = t
+        op_node.children[1] = subexp(op_prior)
+        t = op_node
       end
       t
     end
@@ -285,21 +330,11 @@ module Yang
       parse_exp_list
     end
 
-    def parse_func_call func_exp
-      t = exp_node :func_call
-      match :lparen
-      t.attrs[:parameter_list] = parse_parameter_list
-      match :rparen
-      t.children[0] = func_exp
-      t
-    end
-
-
-    def parse_property_access obj_exp
+    def parse_attribute_access obj_exp
       t = exp_node :access
       match :dot
       t.attrs[:object] = obj_exp
-      t.attrs[:property] = token_str
+      t.attrs[:attribute] = token_str
       match :id
       t
     end
@@ -325,6 +360,15 @@ module Yang
         match token
       when :lbracket
         parse_array
+      else
+        suffixed_exp
+      end
+      t
+    end
+
+    def primary_exp
+      t = nil
+      case token
       when :id
         t = exp_node :id
         t.attrs[:name] = token_str
@@ -336,21 +380,24 @@ module Yang
         match :rparen
       else
         syntax_error
-        next_token
       end
+      t
+    end
 
-      # FIXME need refactor operation priority
-      # loop do
-      #   if token == :dot
-      #     t = parse_property_access t
-      #   elsif token == :lparen
-      #     t = parse_func_call t
-      #   elsif token == :comma || token == :assign
-      #     t = parse_assignment t
-      #   else
-      #     break
-      #   end
-      # end
+    def suffixed_exp
+      t = primary_exp
+
+      loop do
+        if token == :dot
+          t = parse_attribute_access t
+        elsif token == :lparen
+          t = parse_func_call t
+        # elsif token == :comma || token == :assign
+        #   t = parse_assignment t
+        else
+          break
+        end
+      end
       t
     end
 

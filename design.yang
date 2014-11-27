@@ -12,7 +12,10 @@ b[1]
 b[1, 4]
 b[1, -1] = 1
 "asdasdasd"
-#defined?
+
+dict = {a:1, b:2}
+dict["a"] #=>1
+#dict.a error, not attribute
 has(b,1)
 result, value = has_get(b, 1)
 #while a
@@ -24,7 +27,7 @@ result, value = has_get(b, 1)
 #set(b, 1)
 #b.xxx
 #nil
-global.test_func = fun(a, b) ->
+fun test_func(a, b) ->
   a = clone(a)
   for k in keys(b)
     if v = b.get(k)
@@ -33,21 +36,27 @@ global.test_func = fun(a, b) ->
   ;
 ;
 
+test_func = fun()->;
+
 class Person
   #include(Object)
   include(BasePerson)
-#self == Person
-  merge(self, {
-    hello: fun(self) -> puts("hello every one!");,
-    init: fun(self) -> puts("i'm initialized"),
-    say: fun(self) ->
-      if super.say
-        super.say(self)
-        #super == BasePerson
-      else
-        puts("nothing")
-      ;
-  })
+
+  fun init(self) ->
+    puts("called when object created")
+    self.words_to_say = "nice to meet you!"
+  ;
+
+  fun hello(self) -> puts("hello every one!");
+
+  fun say(self) ->
+    if super.say
+      super.say(self.words_to_say)
+      #super == BasePerson
+    else
+      puts("nothing")
+    ;
+  ;
 ;
 
 true
