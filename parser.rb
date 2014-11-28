@@ -244,6 +244,16 @@ module Yang
       t
     end
 
+
+    def parse_index_access obj_exp
+      t = exp_node :index_access
+      match :lbracket
+      t.attrs[:object] = obj_exp
+      t.attrs[:params] = parse_parameter_list
+      match :rbracket
+      t
+    end
+
     def parse_function_param_list
       params = []
       match :lparen
@@ -258,7 +268,7 @@ module Yang
 
     def parse_function
       t = exp_node :literal
-      t.attrs[:literal_type] = :fun
+      t.attrs[:type] = :fun
       match :fun
       t.attrs[:params] = parse_function_param_list
       match :dash
@@ -267,12 +277,30 @@ module Yang
       match :semi
     end
 
+    def parse_hash
+      t = exp_node :literal
+      t.attrs[:type] = :hash
+      match :lbrace
+      hash_value = {}
+      while token != :rbrace
+        key = token_str
+        match :id
+        match :colon
+        hash_value[key] = exp
+        match :comma if token != :rbrace
+      end
+      match :rbrace
+      t.attrs[:val] = hash_value
+      t
+    end
+
     def parse_array
       t = exp_node :literal
-      t.attrs[:literal_type] = :array
+      t.attrs[:type] = :array
       match :lbracket
-      t.attrs[:val_list] = parse_exp_list
+      t.attrs[:val] = parse_exp_list
       match :rbracket
+      t
     end
 
     def print_stmt
@@ -291,11 +319,11 @@ module Yang
         match token
         t = exp_node :op
         t.attrs[:op] = token
-        t.children[0] = factor
+        t.children[0] = primary_exp
         return t
       end
 
-      t = factor
+      t = suffixed_exp
       op_prior = get_op_prior token
       while op_prior && op_prior > limit
         op_node = exp_node :op
@@ -331,11 +359,11 @@ module Yang
       t
     end
 
-    def factor
+    def primary_exp
       case token
       when :nil
         t = exp_node :literal
-        t.attrs[:literal_type] = :nil
+        t.attrs[:type] = :nil
         t.attrs[:val] = :nil
         match :nil
         t
@@ -343,25 +371,22 @@ module Yang
         parse_function
       when :num
         t = exp_node :literal
-        t.attrs[:literal_type] = :num
+        t.attrs[:type] = :num
         t.attrs[:val] = token_str.to_i
         match :num
         t
       when :true, :false
-        t = exp_node :literal_bool
+        t = exp_node :literal
+        t.attrs[:type] = :bool
         t.attrs[:val] = token_str
         match token
         t
-      when :lbracket
-        parse_array
-      else
-        suffixed_exp
-      end
-    end
-
-    def primary_exp
-      t = nil
-      case token
+      when :string
+        t = exp_node :literal
+        t.attrs[:type] = :string
+        t.attrs[:val] = token_str
+        match :string
+        t
       when :id
         t = exp_node :id
         t.attrs[:name] = token_str
@@ -371,10 +396,14 @@ module Yang
         match :lparen
         t = exp
         match :rparen
+        t
+      when :lbracket
+        parse_array
+      when :lbrace
+        parse_hash
       else
         syntax_error
       end
-      t
     end
 
     def suffixed_exp
@@ -384,9 +413,9 @@ module Yang
         if token == :dot
           t = parse_attribute_access t
         elsif token == :lparen
-          t = parse_func_call t
-        # elsif token == :comma || token == :assign
-        #   t = parse_assignment t
+          t = parse_function_call t
+        elsif token == :lbracket
+          t = parse_index_access t
         else
           break
         end

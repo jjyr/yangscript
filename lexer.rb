@@ -40,6 +40,9 @@ module Yang
             state = :innum
           elsif (isalpha(c))
             state = :inid
+          elsif (c == '"')
+            save = false
+            state = :instr
           elsif (c == '=')
             state = :ineq
           elsif(isblank c)
@@ -83,6 +86,8 @@ module Yang
               token = :comma
             when '.'
               token = :dot
+            when ':'
+              token = :colon
             when ';'
               token = :semi
             when '\n'
@@ -120,6 +125,12 @@ module Yang
             save = false
             put_back_char
             token = :id
+            state = :done
+          end
+        when :instr
+          if(c == '"')
+            save = false
+            token = :string
             state = :done
           end
         else
