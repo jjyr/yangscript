@@ -129,6 +129,8 @@ module Yang
         return_stmt
       when :print
         print_stmt
+      when :class
+        class_stmt
       else
         parse_assignment_or_exp
       end
@@ -176,6 +178,15 @@ module Yang
       t
     end
 
+    def class_stmt
+      t = stmt_node :class
+      match :class
+      t.attrs[:name] = token_str
+      t.children[0] = stmt_sequence
+      match :semi
+      t
+    end
+
     def parse_assignment_or_exp
       id_list = [exp]
       while token == :comma
@@ -185,6 +196,8 @@ module Yang
 
       if token == :assign
         parse_assignment id_list
+      elsif token == :or_assign
+        parse_or_assign id_list[0]
       elsif id_list.size == 1
         id_list[0]
       else
@@ -196,16 +209,24 @@ module Yang
       match :assign
       right_values = parse_exp_list
       if id_list.size == 1
-        t = exp_node :assign
+        t = stmt_node :assign
         t.attrs[:id] = id_list[0]
         t.attrs[:values] = right_values
         t
       else
-        t = exp_node :multiple_assign
+        t = stmt_node :multiple_assign
         t.attrs[:id_list] = id_list
         t.attrs[:values] = right_values
         t
       end
+    end
+
+    def parse_or_assign var_id
+      match :or_assign
+      t = stmt_node :or_assign
+      t.attrs[:id] = var_id
+      t.attrs[:value] = exp
+      t
     end
 
     def parse_function_call fun_exp
@@ -319,7 +340,8 @@ module Yang
     end
 
     def parse_exp_list
-      list = [exp]
+      list = []
+      list << exp if token != :rparen
       while token == :comma
         match :comma
         list << exp
@@ -447,7 +469,7 @@ module Yang
     end
 
     def syntax_error
-      raise "syntaxError, unexpected token: #{@token} line: #{@lexer.line_no}"
+      raise "syntaxError, unexpected token: #{token} value: #{token_str} line: #{@lexer.line_no}"
     end
   end
 end

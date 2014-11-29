@@ -45,6 +45,10 @@ module Yang
             state = :instr
           elsif (c == '=')
             state = :ineq
+          elsif(c == '&')
+            state = :inand
+          elsif(c == '|')
+            state = :inor
           elsif(isblank c)
             save = false
           elsif (c == '#')
@@ -92,6 +96,8 @@ module Yang
               token = :semi
             when '\n'
               token = :newline
+            when '!'
+              state = :not
             else
               token = :error
             end
@@ -132,6 +138,30 @@ module Yang
             save = false
             token = :string
             state = :done
+          end
+        when :inand
+          state = :done
+          if(c == '&')
+            token = :and
+          else
+            save = false
+            token = :b_and
+          end
+        when :inor
+          if(c == '|')
+            state = :inor_assign
+          else
+            state = :done
+            save = false
+            token = :b_or
+          end
+        when :inor_assign
+          state = :done
+          if(c == '=')
+            token = :or_assign
+          else
+            save = false
+            token = :or
           end
         else
           puts "Scanner Bug: state= #{state}"
