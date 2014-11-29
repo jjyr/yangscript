@@ -30,7 +30,10 @@ result, value = has_get(b, 1)
 fun test_func(a, b) ->
   a = clone(a)
   for k in keys(b)
-    if v = b.get(k)
+    v = b.get(k)
+    if v
+    elsif a
+    else
       a.set(k, b)
     ;
   ;

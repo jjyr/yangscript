@@ -83,18 +83,20 @@ module Yang
       end
     end
 
-    def is_stmt_sequence_end
-      token == :endfile || token == :semi
-    end
+    STOP_TOKENS = [:semi].freeze
 
-    def stmt_sequence
-      match token while token == :newline
-      t = statement
+    def stmt_sequence stop_tokens=STOP_TOKENS
+      trim_empty_lines
+      t = if stop_tokens.include? token
+            empty_statement
+          else
+            statement
+          end
+      trim_empty_lines
       pt = t
-      while !is_stmt_sequence_end
-        match token while token == :newline
-        break if is_stmt_sequence_end
+      while !(token == :endfile) && !stop_tokens.include?(token)
         qt = statement
+        trim_empty_lines
         if qt
           if t.nil?
             t = pt = qt
@@ -107,10 +109,16 @@ module Yang
       t
     end
 
+    def trim_empty_lines
+      match token while token == :newline
+    end
+
+    def empty_statement
+      stmt_node :nothing
+    end
+
     def statement
       case token
-      when :if
-        if_stmt
       when :while
         while_stmt
       when :for
@@ -119,31 +127,11 @@ module Yang
         break_stmt
       when :return
         return_stmt
-      when :fun
-        def_func_stmt
       when :print
         print_stmt
       else
         parse_assignment_or_exp
       end
-    end
-
-    def if_stmt
-      t = stmt_node :if
-      match :if
-      match :lparen
-      t.children[0] = exp
-      match :rparen
-      match :lbrace
-      t.children[1] = stmt_sequence
-      match :rbrace
-      if token == :else
-        match :else
-        match :lbrace
-        t.children[2] = stmt_sequence if @token != :rbrace
-        match :rbrace
-      end
-      t
     end
 
     def while_stmt
@@ -153,7 +141,7 @@ module Yang
       t.children[0] = exp
       match :rparen
       match :lbrace
-      t.children[1] = stmt_sequence if @token != :rbrace
+      t.children[1] = stmt_sequence
       match :rbrace
       t
     end
@@ -161,16 +149,18 @@ module Yang
     def for_stmt
       t = stmt_node :for
       match :for
-      match :lparen
-      t.children[0] = exp
+      id_list = [token_str]
+      match :id
+      while token == :comma
+        match :comma
+        id_list << token_str
+        match :id
+      end
+      match :in
+      t.attrs[:id_list] = id_list
+      t.attrs[:iter_exp] = suffixed_exp
+      t.children[0] = stmt_sequence
       match :semi
-      t.children[1] = exp
-      match :semi
-      t.children[2] = exp
-      match :rparen
-      match :lbrace
-      t.children[3] = stmt_sequence if @token != :rbrace
-      match :rbrace
       t
     end
 
@@ -218,23 +208,6 @@ module Yang
       end
     end
 
-    def def_func_stmt
-      t = stmt_node :def_func
-      match :fun
-      if token == :id
-        t.attrs[:name] = @token_str
-      end
-      match :id
-      t.attrs[:params] = def_func_parameters
-      t.attrs[:arity] = t.attrs[:params].size
-      match :lbrace
-      if token != :rbrace
-        t.children[0] = stmt_sequence
-      end
-      match :rbrace
-      t
-    end
-
     def parse_function_call fun_exp
       t = exp_node :fun_call
       match :lparen
@@ -267,14 +240,22 @@ module Yang
     end
 
     def parse_function
-      t = exp_node :literal
-      t.attrs[:type] = :fun
       match :fun
+      t = nil
+      if token == :id
+        t = exp_node :define_function
+        t.attrs[:name] = token_str
+        match :id
+      else
+        t = exp_node :literal
+        t.attrs[:type] = :fun
+      end
       t.attrs[:params] = parse_function_param_list
       match :dash
       match :gt
       t.children[0] = stmt_sequence
       match :semi
+      t
     end
 
     def parse_hash
@@ -359,6 +340,33 @@ module Yang
       t
     end
 
+
+    IF_STOP_TOKENS = [:elsif, :else, :semi].freeze
+    def parse_if_exp
+      t = exp_node :if
+      match :if
+      branch = {}
+      branch[:condition] = exp
+      branch[:body] = stmt_sequence(IF_STOP_TOKENS)
+      branches = [branch]
+      while token == :elsif
+        match :elsif
+        branch = {}
+        branch[:condition] =  exp
+        branch[:body] = stmt_sequence(IF_STOP_TOKENS)
+        branches << branch
+      end
+      if token == :else
+        match :else
+        branch = {condition: :else}
+        branch[:body] = stmt_sequence(IF_STOP_TOKENS)
+        branches << branch
+      end
+      match :semi
+      t.attrs[:branches] = branches
+      t
+    end
+
     def primary_exp
       case token
       when :nil
@@ -401,6 +409,8 @@ module Yang
         parse_array
       when :lbrace
         parse_hash
+      when :if
+        parse_if_exp
       else
         syntax_error
       end
