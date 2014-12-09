@@ -9,7 +9,7 @@ module Yang
   end
 
   class StmtNode < TreeNode
-    attr_accessor :stmt
+    attr_accessor :kind
   end
 
   BINARY_OP_PRIOR = {
@@ -30,20 +30,20 @@ module Yang
   UNARY_OP = [:plus, :dash]
 
   class ExpNode < TreeNode
-    attr_accessor :exp
+    attr_accessor :kind
   end
 
   module ParserHelper
     def stmt_node kind
       node = StmtNode.new
-      node.stmt = kind
+      node.kind = kind
       node.line_no = @lexer.line_no
       node
     end
 
     def exp_node kind
       node = ExpNode.new
-      node.exp = kind
+      node.kind = kind
       node.line_no = @lexer.line_no
       node
     end
@@ -211,7 +211,9 @@ module Yang
       if id_list.size == 1
         t = stmt_node :assign
         t.attrs[:id] = id_list[0]
-        t.attrs[:values] = right_values
+        values = right_values
+        raise_error("right side more than 1 value") if values.size != 1
+        t.attrs[:value] = values[0]
         t
       else
         t = stmt_node :multiple_assign
@@ -232,7 +234,7 @@ module Yang
     def parse_function_call fun_exp
       t = exp_node :fun_call
       match :lparen
-      t.attrs[:parameter_list] = parse_parameter_list
+      t.attrs[:params] = parse_parameter_list
       match :rparen
       t.children[0] = fun_exp
       t
@@ -319,8 +321,8 @@ module Yang
     def subexp limit
       if is_unary_op(token)
         match token
-        t = exp_node :op
-        t.attrs[:op] = token
+        t = exp_node :operator
+        t.attrs[:operator] = token
         t.children[0] = primary_exp
         return t
       end
@@ -328,8 +330,8 @@ module Yang
       t = suffixed_exp
       op_prior = get_op_prior token
       while op_prior && op_prior > limit
-        op_node = exp_node :op
-        op_node.attrs[:op] = token
+        op_node = exp_node :operator
+        op_node.attrs[:operator] = token
         match token
         op_node.children[0] = t
         op_node.children[1] = subexp(op_prior)
