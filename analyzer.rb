@@ -2,12 +2,13 @@ module Yang
   class Analyzer
     attr_reader :symbol_table
 
-    def initialize
+    def initialize tree
       @symbol_table = {}
+      @tree = tree
     end
 
-    def analyze tree
-      build_symbol_table tree
+    def analyze
+      build_symbol_table @tree
     end
 
     private

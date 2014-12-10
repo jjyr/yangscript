@@ -1,16 +1,18 @@
 module Yang
   class Emitter
     attr_accessor :output
-    def initialize output
-      @output = output
+
+    def initialize syntax_tree, analizer
+      @analizer = analizer
+      @syntax_tree = syntax_tree
     end
 
     def write str
       @output.write str
     end
 
-    def emit(tree)
-      emit_seq tree
+    def emit
+      emit_seq @syntax_tree
     end
 
     def emit_seq node

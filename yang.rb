@@ -12,9 +12,9 @@ require 'pry-nav'
 source = open("./design.yang", "r").read.each_line.to_a
 lexer = Yang::Lexer.new(source, trace_scan: false)
 syntax_tree = Yang::Parser.new.parse(lexer)
-analyzer = Yang::Analyzer.new
-analyzer.analyze(syntax_tree)
-p analyzer.symbol_table.keys
-output = StringIO.new
-#Yang::Emitter.new(output).emit(syntax_tree)
-puts output.string
+analyzer = Yang::Analyzer.new syntax_tree
+analyzer.analyze
+emitter = Yang::Emitter.new(syntax_tree, analyzer)
+emitter.output = StringIO.new
+emitter.emit
+puts emitter.output.string
