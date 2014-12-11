@@ -1,6 +1,6 @@
 module Yang
   class TreeNode
-    attr_accessor :children, :sibling, :line_no, :attrs, :outer_node, :symbol_table
+    attr_accessor :children, :sibling, :line_no, :attrs, :outer, :symbol_table
 
     def initialize
       @children = []
