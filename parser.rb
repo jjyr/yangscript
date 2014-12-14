@@ -1,16 +1,12 @@
 module Yang
   class TreeNode
-    attr_accessor :children, :sibling, :line_no, :attrs, :outer, :symbol_table
+    attr_accessor :node_type, :kind, :children, :sibling, :line_no, :attrs, :outer, :symbol_table
 
     def initialize
       @children = []
       @attrs = {}
       @symbol_table = {}
     end
-  end
-
-  class StmtNode < TreeNode
-    attr_accessor :kind
   end
 
   BINARY_OP_PRIOR = {
@@ -30,22 +26,20 @@ module Yang
 
   UNARY_OP = [:plus, :dash]
 
-  class ExpNode < TreeNode
-    attr_accessor :kind
-  end
-
   module ParserHelper
     def stmt_node kind
-      node = StmtNode.new
+      node = TreeNode.new
       node.kind = kind
-      node.line_no = @lexer.line_no
+      node.node_type = :statement
+      @lexer && node.line_no = @lexer.line_no
       node
     end
 
     def exp_node kind
-      node = ExpNode.new
+      node = TreeNode.new
       node.kind = kind
-      node.line_no = @lexer.line_no
+      node.node_type = :exp
+      @lexer && node.line_no = @lexer.line_no
       node
     end
 
@@ -152,15 +146,15 @@ module Yang
     def for_stmt
       t = stmt_node :for
       match :for
-      id_list = [token_str]
+      var_list = [token_str]
       match :id
       while token == :comma
         match :comma
-        id_list << token_str
+        var_list << token_str
         match :id
       end
       match :in
-      t.attrs[:id_list] = id_list
+      t.attrs[:var_list] = var_list
       t.attrs[:iter_exp] = suffixed_exp
       t.children[0] = stmt_sequence
       match :semi
