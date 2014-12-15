@@ -116,11 +116,11 @@ module Yang
             branch[:body] = trans_stmt_seq_return branch[:body]
           end
           if branches.last.attrs[:condition] != :else
-            return_node.attrs[:val] = exp_node :nil
+            return_node.attrs[:val] = nil_node
             body << return_node
           end
         elsif stmt.kind != :return
-          return_node.attrs[:val] = exp_node :nil
+          return_node.attrs[:val] = nil_node
           body << return_node
         end
       else

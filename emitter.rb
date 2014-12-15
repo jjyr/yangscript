@@ -66,13 +66,14 @@ module Yang
       end
     end
 
-    def index_var context
-      context.attrs[:index_var] ||= tmp_var(context)
+    def emit_return node
+      write "return "
+      node.attrs[:val] and emit_exp node.attrs[:val]
     end
 
     def emit_for node
       iter_var = tmp_var node.outer
-      i_var = index_var(node.outer)
+      i_var = tmp_var node.outer
       write iter_var
       write "="
       emit_exp node.attrs[:iter_exp]
@@ -225,6 +226,7 @@ module Yang
         obj_exp = obj_exp.attrs[:object]
       end
       emit_exp obj_exp
+      write "."
       write access_path
     end
 
@@ -240,9 +242,15 @@ module Yang
         emit_string node
       when :hash
         emit_hash node
+      when :nil
+        emit_nil node
       else
         raise "cannot detect literal type: #{node.attrs[:type]}"
       end
+    end
+
+    def emit_nil node
+      write "null"
     end
 
     def emit_num node

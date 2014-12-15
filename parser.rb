@@ -43,6 +43,12 @@ module Yang
       node
     end
 
+    def nil_node
+      t = exp_node :literal
+      t.attrs[:type] = :nil
+      t
+    end
+
     def get_op_prior op
       BINARY_OP_PRIOR[op]
     end
@@ -83,7 +89,7 @@ module Yang
     def stmt_sequence stop_tokens=STOP_TOKENS
       trim_empty_lines
       t = if stop_tokens.include? token
-            empty_statement
+            nil_node
           else
             statement
           end
@@ -106,10 +112,6 @@ module Yang
 
     def trim_empty_lines
       match token while token == :newline
-    end
-
-    def empty_statement
-      stmt_node :nothing
     end
 
     def statement
