@@ -24,8 +24,16 @@ module Yang
       end
     end
 
+    def search_function_params node, key
+      if node.kind == :function || node.attrs[:type] == :fun
+        node.attrs[:params].include? key
+      else
+        false
+      end
+    end
+
     def search_key context, key
-      if context.symbol_table.has_key? key
+      if context.symbol_table.has_key?(key)
         context
       elsif context.outer
         search_key(context.outer, key)
@@ -37,6 +45,10 @@ module Yang
     def insert_table key, context, node
       if new_context = search_key(context, key)
         new_context.symbol_table[key].include? node or new_context.symbol_table[key] << node
+      elsif search_function_params(context, key)
+        params_symbol_table = context.attrs[:params_symbol_table] ||= {}
+        params_symbol_table[key] ||= []
+        params_symbol_table[key].include? node or params_symbol_table[key] << node
       else
         context.symbol_table[key] = [node]
       end

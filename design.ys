@@ -3,14 +3,14 @@ a = 1
 a = fun(x, b) -> x + b;
 
 b = [1,2,3].map(f)
-a, b = [b, a, 3]
+a, b = b, a, 3
 # a=> b, b=> a
-a,_, b = [b, a, 3]
+a,_, b = b, a, 3
 # a=> b, b=> 3
 
 b[1]
 b[1, 4]
-b[1, -1] = 1
+#b[1, -1] = 1
 "asdasdasd"
 
 dict = {a:1, b:2}

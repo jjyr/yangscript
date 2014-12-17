@@ -12,16 +12,31 @@ module Yang
     end
 
     def emit
+      emit_variables_define @syntax_tree.outer
       emit_seq @syntax_tree
     end
 
-    def emit_seq node, sep = ";\n"
+    def emit_variables_define node
+      vars = node.symbol_table.keys
+      vars += node.attrs[:temp_vars] if node.attrs[:temp_vars]
+      return if vars.empty?
+      write "var "
+      limit = vars.length - 1
+      vars.each_with_index do |var, i|
+        write var
+        write "," if i < limit
+      end
+      write ";"
+    end
+
+    def emit_seq node, sep = ";\n", write_last=true
       loop do
-        write emit_statement(node)
-        write sep
+        emit_statement(node)
         node = node.sibling
         node.nil? and break
+        write sep
       end
+      write sep if write_last
     end
 
     def emit_statement node
@@ -86,7 +101,7 @@ module Yang
       write ".length;"
       write i_var
       write "++"
-      "){"
+      write "){"
       node.attrs[:var_list].each_with_index do |var, i|
         write var
         write "="
@@ -96,7 +111,7 @@ module Yang
         write "];"
       end
       emit_seq node.children[0]
-      write "};"
+      write "}"
     end
 
     def emit_if node
@@ -110,11 +125,11 @@ module Yang
         end
         emit_exp(branch[:condition])
         write "?"
-        emit_seq(branch[:body])
+        emit_seq(branch[:body], ",", false)
         write ":"
       end
       if (branch = branches[-1])[:condition] == :else
-        emit_seq(branch[:body])
+        emit_seq(branch[:body], ",", false)
       else
         write "null"
       end
@@ -163,16 +178,16 @@ module Yang
     def emit_get_attr obj, attr
       write "$obj_attr("
       emit_exp obj
-      write ", $"
+      write ", '$"
       write attr
-      write ")"
+      write "')"
     end
 
     def emit_index_access node
       emit_get_attr node.attrs[:object], "[]"
       write("(")
       emit_exp_list node.attrs[:params]
-      write(");")
+      write(")")
     end
 
     def write_operator op
@@ -261,6 +276,7 @@ module Yang
       write "function("
       write node.attrs[:params].join(",")
       write "){"
+      emit_variables_define node
       emit_seq node.children[0]
       write "}"
     end
@@ -271,6 +287,7 @@ module Yang
         write_string k
         write ":"
         emit_exp v
+        write ","
       end
       write "}"
     end
@@ -309,7 +326,7 @@ module Yang
           write "="
         end
         emit_exp exp_node
-        write ";"
+        write ";" if var_list.size > i
       end
     end
 

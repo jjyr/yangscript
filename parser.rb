@@ -263,7 +263,7 @@ module Yang
       match :fun
       t = nil
       if token == :id
-        t = exp_node :define_function
+        t = exp_node :function
         t.attrs[:name] = token_str
         match :id
       else
