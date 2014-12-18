@@ -12,8 +12,22 @@ module Yang
     end
 
     def emit
-      emit_variables_define @syntax_tree.outer
-      emit_seq @syntax_tree
+      emit_runtime
+      emit_env do
+        emit_variables_define @syntax_tree.outer
+        emit_seq @syntax_tree
+      end
+    end
+
+    def emit_runtime
+      write open("./env/runtime.js").read
+    end
+
+    def emit_env
+      write "(function($env){"
+      write "var $obj_attr = $env.find_obj_attr, $_hash = $env._hash;"
+      yield
+      write "})(yangscript)"
     end
 
     def emit_variables_define node
@@ -59,7 +73,7 @@ module Yang
         emit_multiple_assign node
       when :define_function
         emit_define_function node
-      when :nothing
+      #when :nothing
         #just do nothing
       else
         emit_exp node
@@ -92,6 +106,7 @@ module Yang
       write iter_var
       write "="
       emit_exp node.attrs[:iter_exp]
+      write ";"
       write "for("
       write i_var
       write "=0;"
@@ -176,11 +191,10 @@ module Yang
     end
 
     def emit_get_attr obj, attr
-      write "$obj_attr("
       emit_exp obj
-      write ", '$"
+      write "['$"
       write attr
-      write "')"
+      write "']"
     end
 
     def emit_index_access node
@@ -282,14 +296,14 @@ module Yang
     end
 
     def emit_hash node
-      write "{"
+      write "$_hash({"
       node.attrs[:val].each do |k, v|
         write_string k
         write ":"
         emit_exp v
         write ","
       end
-      write "}"
+      write "})"
     end
 
     def write_string str
@@ -330,9 +344,9 @@ module Yang
       end
     end
 
-    def emit_print
+    def emit_print node
       write "console.log("
-      emit_exp
+      emit_exp node.children[0]
       write ")"
     end
   end

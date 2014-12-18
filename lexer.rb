@@ -43,6 +43,9 @@ module Yang
           elsif (c == '"')
             save = false
             state = :instr
+          elsif (c == '`')
+            save = false
+            state = :inbackquote
           elsif (c == '=')
             state = :ineq
           elsif(c == '&')
@@ -137,6 +140,12 @@ module Yang
           if(c == '"')
             save = false
             token = :string
+            state = :done
+          end
+        when :inbackquote
+          if (c == '`')
+            save = false
+            token = :external
             state = :done
           end
         when :inand

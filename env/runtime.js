@@ -1,7 +1,3 @@
-var yangscript = {};
-yangscript.global = this;
-yangscript.classes = [];
-
 (function(global){
   var env = {};
   var classes = {};
@@ -24,15 +20,14 @@ yangscript.classes = [];
   }
 
   function find_obj_attr(obj, attr){
-    var value;
-    value = obj[attr] || find_cls_attr(obj.$class)
+    var result = {}, value;
+    value = obj[attr] || find_cls_attr(obj.$class, attr)
     if(value === undefined) {
       throw "cannot find attribute " + attr
     } else {
       return value
     }
   }
-  //obj_attr("", attr)
 
   function setup_native_class(name, klass, ancestors){
     if(classes[name]) {
@@ -40,10 +35,12 @@ yangscript.classes = [];
     }
     klass.$name = name;
     klass.$ancestors = ancestors;
+    klass.prototype.$class = klass
     classes[name] = klass
   }
+
   function Class(){}
-  object = function(){};
+  var object = function(){};
   object.$class = Class
   setup_native_class('Object', object, []);
   //Number.hehe
@@ -54,8 +51,29 @@ yangscript.classes = [];
   // $scope.get(a).get(new)
   basic_ancestors = [object]
   setup_native_class("Array", Array, basic_ancestors)
+  Array.prototype["$[]"] = function(index){return this[index]}
   setup_native_class("Boolean", Boolean, basic_ancestors)
   setup_native_class("Number", Number, basic_ancestors)
   setup_native_class("String", Array, basic_ancestors)
   setup_native_class("Function", Function, basic_ancestors)
+
+  function new_class(name, ancestors){
+    var klass = function(){}
+    setup_native_class(name, klass, ancestors)
+    return klass
+  }
+
+  var hash_class = new_class("Hash", basic_ancestors)
+  hash_class.prototype["$[]"] = function(index){return this._hash_obj[index]}
+
+  // convert js object to yangscript hash
+  function _hash(obj){
+    new_obj = new hash_class()
+    new_obj._hash_obj = obj
+    return new_obj
+  }
+
+  env._hash = _hash
+
+  global.yangscript = env;
 })(this);
