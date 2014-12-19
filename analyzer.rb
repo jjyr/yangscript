@@ -81,6 +81,8 @@ module Yang
           trans_function node
           build_inner_node node
         end
+      when :fun_call
+        build_from_node(node.children[0])
       when :define_function
         if node.outer.kind != :class
           analyze_error "named function can only defined in class context", node

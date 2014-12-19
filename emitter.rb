@@ -117,12 +117,24 @@ module Yang
       write i_var
       write "++"
       write "){"
-      node.attrs[:var_list].each_with_index do |var, i|
+      if node.attrs[:var_list].size > 1
+        node.attrs[:var_list].each_with_index do |var, i|
+          write var
+          write "="
+          write iter_var
+          write "["
+          write i_var
+          write "]["
+          write i
+          write "}];"
+        end
+      else
+        var = node.attrs[:var_list][0]
         write var
         write "="
         write iter_var
         write "["
-        write i
+        write i_var
         write "];"
       end
       emit_seq node.children[0]
