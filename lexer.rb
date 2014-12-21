@@ -111,7 +111,9 @@ module Yang
             state = :done
             token = :endfile
           elsif (c == '\n')
-            state = :start
+            save = true
+            state = :done
+            token = :newline
           end
         when :ineq
           state = :done
