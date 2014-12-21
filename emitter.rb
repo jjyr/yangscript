@@ -71,10 +71,10 @@ module Yang
         emit_assign node
       when :multiple_assign
         emit_multiple_assign node
+      when :or_assign
+        emit_or_assign node
       when :define_function
         emit_define_function node
-      #when :nothing
-        #just do nothing
       else
         emit_exp node
       end
@@ -220,6 +220,8 @@ module Yang
       case op
       when :plus
         write "+"
+      when :or
+        write "||"
       else
         raise "cannot detect operator #{op}"
       end
@@ -239,11 +241,7 @@ module Yang
     end
 
     def emit_exp_list list
-      limit = list.size - 1
-      list.each_with_index do |param_node, i|
-        emit_exp param_node
-        write "," if i < limit
-      end
+      write_list(list){|node| emit_exp(node)}
     end
 
     def emit_function_call node
@@ -271,6 +269,16 @@ module Yang
       write access_path
     end
 
+
+    def emit_class node
+      class_name = node.attrs[:name]
+      write class_name
+      write "="
+      write "$new_class("
+      write_string class_name
+      write ")"
+    end
+
     def emit_literal node
       case node.attrs[:type]
       when :num
@@ -283,11 +291,17 @@ module Yang
         emit_string node
       when :hash
         emit_hash node
+      when :bool
+        emit_bool node
       when :nil
         emit_nil node
       else
         raise "cannot detect literal type: #{node.attrs[:type]}"
       end
+    end
+
+    def emit_bool node
+      write node.attrs[:val]
     end
 
     def emit_nil node
@@ -307,6 +321,14 @@ module Yang
       write "}"
     end
 
+    def write_list list
+      limit = list.size - 1
+      list.each_with_index do |elem, i|
+        yield elem
+        write "," if i < limit
+      end
+    end
+
     def emit_hash node
       write "$_hash({"
       node.attrs[:val].each do |k, v|
@@ -315,7 +337,11 @@ module Yang
         emit_exp v
         write ","
       end
-      write "})"
+      write "},"
+      write "["
+      write_list(node.attrs[:val].keys){|str| write_string str}
+      write "]"
+      write ")"
     end
 
     def write_string str
@@ -340,7 +366,7 @@ module Yang
 
     def emit_assign node
       emit_id node.attrs[:id]
-      write " = "
+      write "="
       emit_exp node.attrs[:value]
     end
 
@@ -354,6 +380,14 @@ module Yang
         emit_exp exp_node
         write ";" if var_list.size > i
       end
+    end
+
+    def emit_or_assign node
+      emit_id node.attrs[:id]
+      write "="
+      emit_id node.attrs[:id]
+      write "||"
+      emit_exp node.attrs[:value]
     end
 
     def emit_print node

@@ -29,20 +29,22 @@
     }
   }
 
-  function setup_native_class(name, klass, ancestors){
+  function setup_class(name, klass, ctor, ancestors){
     if(classes[name]) {
       throw "class " + name + "already defined."
     }
     klass.$name = name;
     klass.$ancestors = ancestors;
     klass.prototype.$class = klass
-    classes[name] = klass
+    classes[name] = {klass: klass, ctor: ctor}
   }
 
   function Class(){}
   var object = function(){};
   object.$class = Class
-  setup_native_class('Object', object, []);
+  object.prototype.$class = Class
+
+  setup_class('Object', object, null, []);
   //Number.hehe
   //class -> {$new.., $to_s, $hello}
   //A().to_s
@@ -50,26 +52,39 @@
   // a -> {members:{}, class:A}
   // $scope.get(a).get(new)
   basic_ancestors = [object]
-  setup_native_class("Array", Array, basic_ancestors)
+  setup_class("Array", Array, null, basic_ancestors)
   Array.prototype["$[]"] = function(index){return this[index]}
-  setup_native_class("Boolean", Boolean, basic_ancestors)
-  setup_native_class("Number", Number, basic_ancestors)
-  setup_native_class("String", Array, basic_ancestors)
-  setup_native_class("Function", Function, basic_ancestors)
+  setup_class("Boolean", Boolean, null, basic_ancestors)
+  setup_class("Number", Number, null, basic_ancestors)
+  setup_class("String", Array, null, basic_ancestors)
+  setup_class("Function", Function, null, basic_ancestors)
 
   function new_class(name, ancestors){
     var klass = function(){}
-    setup_native_class(name, klass, ancestors)
-    return klass
+    var ctor = function(){return new klass()}
+    ancestors = ancestors || basic_ancestors
+    setup_class(name, klass, ctor, ancestors)
+    return ctor
+  }
+  env.new_class = new_class
+
+  var hash_ctor = new_class("Hash", basic_ancestors)
+  var hash_class = classes["Hash"]
+  hash_class.prototype["$[]"] = function(key){
+    var keys = this._keys
+    for(var i = 0; i < keys.length; i++){
+      if(keys[i] == key) {
+        return this._hash_obj[key]
+      }
+    }
+    throw "cannot find key: " + key
   }
 
-  var hash_class = new_class("Hash", basic_ancestors)
-  hash_class.prototype["$[]"] = function(index){return this._hash_obj[index]}
-
   // convert js object to yangscript hash
-  function _hash(obj){
-    new_obj = new hash_class()
+  function _hash(obj, keys){
+    new_obj = hash_ctor()
     new_obj._hash_obj = obj
+    new_obj._keys = keys
     return new_obj
   }
 
