@@ -2,7 +2,7 @@ a = 1
 #global
 a = fun(x, b) -> x + b;
 
-b = [1,2,3].map(f)
+b = [1,2,3].map(a)
 a, b = b, a, 3
 # a=> b, b=> a
 a,_, b = b, a, 3
@@ -10,7 +10,7 @@ a,_, b = b, a, 3
 
 b[1]
 b[1, 4]
-#b[1, -1] = 1
+b[1, -1] = 1
 "asdasdasd"
 
 dict = {a:1, b:2}
@@ -27,7 +27,7 @@ result, value = has_get(b, 1)
 #set(b, 1)
 #b.xxx
 #nil
-test_func = fun (a, b) ->
+fun test_func(a, b) ->
   a = clone(a)
   for k in keys(b)
     v = b.get(k)
@@ -40,3 +40,32 @@ test_func = fun (a, b) ->
 ;
 
 test_func = fun()->;
+
+class Person
+  #include(Object)
+  include(BasePerson)
+
+  fun init(self) ->
+    puts("called when object created")
+    self.words_to_say = "nice to meet you!"
+  ;
+
+  fun hello(self) -> puts("hello every one!");
+
+  fun say(self) ->
+    if super.say
+      super.say(self.words_to_say)
+      #super == BasePerson
+    else
+      puts("nothing")
+    ;
+  ;
+;
+
+true
+false
+nil
+person = Person()
+person.favorite_programing_language ||= "yang"
+person.inherited_method # -> Person -> BasePerson -> Object
+(person.nihao || person.hello)()
