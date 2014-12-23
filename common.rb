@@ -11,6 +11,7 @@ module Yang
     "for" => :for,
     "in" => :in,
     "fun" => :fun,
+    "defun" => :defun,
     "true" => :true,
     "false" => :false,
     "nil" => :nil

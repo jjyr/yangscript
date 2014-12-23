@@ -69,7 +69,7 @@
   env.new_class = new_class
 
   var hash_ctor = new_class("Hash", basic_ancestors)
-  var hash_class = classes["Hash"]
+  var hash_class = classes["Hash"].klass
   hash_class.prototype["$[]"] = function(key){
     var keys = this._keys
     for(var i = 0; i < keys.length; i++){

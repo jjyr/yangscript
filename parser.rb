@@ -128,6 +128,8 @@ module Yang
         print_stmt
       when :class
         class_stmt
+      when :defun
+        define_function_stmt
       else
         parse_assignment_or_exp
       end
@@ -185,36 +187,36 @@ module Yang
     end
 
     def parse_assignment_or_exp
-      id_list = [exp]
+      left_list = [exp]
       while token == :comma
         match :comma
-        id_list << suffixed_exp
+        left_list << suffixed_exp
       end
 
       if token == :assign
-        parse_assignment id_list
+        parse_assignment left_list
       elsif token == :or_assign
-        parse_or_assign id_list[0]
-      elsif id_list.size == 1
-        id_list[0]
+        parse_or_assign left_list[0]
+      elsif left_list.size == 1
+        left_list[0]
       else
         syntax_error
       end
     end
 
-    def parse_assignment id_list
+    def parse_assignment left_list
       match :assign
       right_values = parse_exp_list
-      if id_list.size == 1
+      if left_list.size == 1
         t = stmt_node :assign
-        t.attrs[:id] = id_list[0]
+        t.attrs[:left] = left_list[0]
         values = right_values
         raise_error("right side more than 1 value") if values.size != 1
         t.attrs[:value] = values[0]
         t
       else
         t = stmt_node :multiple_assign
-        t.attrs[:id_list] = id_list
+        t.attrs[:left_list] = left_list
         t.attrs[:values] = right_values
         t
       end
@@ -259,17 +261,25 @@ module Yang
       params
     end
 
+    def define_function_stmt
+      match :defun
+      t = nil
+      t = stmt_node :define_function
+      t.attrs[:name] = token_str
+      match :id
+      t.attrs[:params] = parse_function_param_list
+      match :dash
+      match :gt
+      t.children[0] = stmt_sequence
+      match :semi
+      t
+    end
+
     def parse_function
       match :fun
       t = nil
-      if token == :id
-        t = exp_node :function
-        t.attrs[:name] = token_str
-        match :id
-      else
-        t = exp_node :literal
-        t.attrs[:type] = :fun
-      end
+      t = exp_node :literal
+      t.attrs[:type] = :fun
       t.attrs[:params] = parse_function_param_list
       match :dash
       match :gt

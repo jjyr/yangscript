@@ -62,11 +62,11 @@ module Yang
     def build_from_node node
       case node.kind
       when :assign
-        node.attrs[:id].kind == :id and insert node.attrs[:id], node.outer
+        node.attrs[:left].kind == :id and insert node.attrs[:left], node.outer
         build_from_node node.attrs[:value]
       when :multiple_assign
-        node.attrs[:id_list].each do |id_node|
-          id_node.kind == :id and insert id_node, node.outer
+        node.attrs[:left_list].each do |left_node|
+          left_node.kind == :id and insert left_node, node.outer
         end
         node.attrs[:values].each do |value|
           build_from_node value

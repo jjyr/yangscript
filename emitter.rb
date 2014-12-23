@@ -25,7 +25,7 @@ module Yang
 
     def emit_env
       write "(function($env){"
-      write "var $obj_attr = $env.find_obj_attr, $_hash = $env._hash;"
+      write "var $obj_attr = $env.find_obj_attr, $_hash = $env._hash, $new_class = $env.new_class;"
       yield
       write "})(yangscript)"
     end
@@ -67,6 +67,8 @@ module Yang
         emit_print node
       when :class
         emit_class node
+      when :defun
+        emit_defun node
       when :assign
         emit_assign node
       when :multiple_assign
@@ -199,7 +201,8 @@ module Yang
       write var
       write "="
       emit_function node
-      write_function_call "$define_function", [node.outer.attrs[:name], var]
+      write ";"
+      write_function_call "$defun", [node.outer.attrs[:name], var]
     end
 
     def emit_get_attr obj, attr
@@ -274,9 +277,16 @@ module Yang
       class_name = node.attrs[:name]
       write class_name
       write "="
-      write "$new_class("
+      write "function(){"
+      write "var "
+      write class_name
+      write " = $new_class("
       write_string class_name
-      write ")"
+      write ");"
+      emit_seq node.children[0]
+      write "return "
+      write class_name
+      write ";}()"
     end
 
     def emit_literal node
@@ -364,14 +374,25 @@ module Yang
       write node.attrs[:name]
     end
 
+    def emit_left node
+      case node.kind
+      when :id
+        emit_id node
+      when :access
+        emit_access node
+      else
+        raise "cannot detect left value kind: #{node.kind}"
+      end
+    end
+
     def emit_assign node
-      emit_id node.attrs[:id]
+      emit_left node.attrs[:left]
       write "="
       emit_exp node.attrs[:value]
     end
 
     def emit_multiple_assign node
-      var_list = node.attrs[:id_list]
+      var_list = node.attrs[:left_list]
       node.attrs[:values].each_with_index do |exp_node, i|
         if var = var_list[i]
           write var.attrs[:name]
@@ -383,9 +404,9 @@ module Yang
     end
 
     def emit_or_assign node
-      emit_id node.attrs[:id]
+      emit_exp node.attrs[:id]
       write "="
-      emit_id node.attrs[:id]
+      emit_exp node.attrs[:id]
       write "||"
       emit_exp node.attrs[:value]
     end
