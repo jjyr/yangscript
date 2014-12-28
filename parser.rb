@@ -314,6 +314,13 @@ module Yang
       t
     end
 
+    def parse_new
+      t = exp_node :new
+      match :new
+      t.attrs[:class_exp] = exp
+      return t
+    end
+
     def print_stmt
       t = stmt_node :print
       match :print
@@ -440,6 +447,8 @@ module Yang
         parse_array
       when :lbrace
         parse_hash
+      when :new
+        parse_new
       when :if
         parse_if_exp
       else

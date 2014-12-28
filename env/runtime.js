@@ -19,24 +19,40 @@
     return undefined
   }
 
-  function find_obj_attr(obj, attr){
-    var result = {}, value;
-    value = obj[attr] || find_cls_attr(obj.$class, attr)
-    if(value === undefined) {
+  function get_instance_key(obj, key){
+    var value = obj.$members[key];
+    if(value === null || value === undefined) {
       throw "cannot find attribute " + attr
     } else {
+      var bound = function(){
+        value.apply(undefined, fun_args(obj, arguments))
+      }()
       return value
     }
   }
 
-  function setup_class(name, klass, ctor, ancestors){
+  function get(obj, key){
+    if(obj === undefined) {
+      throw "fatal error, obj should not undefined"
+    } else {
+      var klass = obj.$class
+      if (klass === Class) {
+        get_class_key(obj, key)
+      } else {
+        get_instance_key(obj, key)
+      }
+    }
+  }
+  env.get_attribute = get
+
+  function setup_class(name, klass,  ancestors){
     if(classes[name]) {
       throw "class " + name + "already defined."
     }
     klass.$name = name;
     klass.$ancestors = ancestors;
     klass.prototype.$class = klass
-    classes[name] = {klass: klass, ctor: ctor}
+    classes[name] = klass
   }
 
   function Class(){}
@@ -44,7 +60,7 @@
   object.$class = Class
   object.prototype.$class = Class
 
-  setup_class('Object', object, null, []);
+  setup_class('Object', object, []);
   //Number.hehe
   //class -> {$new.., $to_s, $hello}
   //A().to_s
@@ -52,24 +68,33 @@
   // a -> {members:{}, class:A}
   // $scope.get(a).get(new)
   basic_ancestors = [object]
-  setup_class("Array", Array, null, basic_ancestors)
+  setup_class("Array", Array, basic_ancestors)
   Array.prototype["$[]"] = function(index){return this[index]}
-  setup_class("Boolean", Boolean, null, basic_ancestors)
-  setup_class("Number", Number, null, basic_ancestors)
-  setup_class("String", Array, null, basic_ancestors)
-  setup_class("Function", Function, null, basic_ancestors)
+  setup_class("Boolean", Boolean, basic_ancestors)
+  setup_class("Number", Number, basic_ancestors)
+  setup_class("String", Array, basic_ancestors)
+  setup_class("Function", Function, basic_ancestors)
 
   function new_class(name, ancestors){
-    var klass = function(){}
-    var ctor = function(){return new klass()}
+    var klass = function(){this.init(this)}
     ancestors = ancestors || basic_ancestors
-    setup_class(name, klass, ctor, ancestors)
-    return ctor
+    setup_class(name, klass, ancestors)
+    return klass
   }
   env.new_class = new_class
 
-  var hash_ctor = new_class("Hash", basic_ancestors)
-  var hash_class = classes["Hash"].klass
+  function defun(klass, name, fun){
+    klass.prototype[name] = fun
+  }
+  env.defun = defun
+
+  function fun_args(self, args){
+    var result = Array.prototype.slice.call(args);
+    result.unshift(self)
+    return result
+  }
+
+  var hash_class = new_class("Hash", basic_ancestors)
   hash_class.prototype["$[]"] = function(key){
     var keys = this._keys
     for(var i = 0; i < keys.length; i++){

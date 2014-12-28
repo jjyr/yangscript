@@ -8,6 +8,7 @@ module Yang
     "return" => :return,
     "print" => :print,
     "class" => :class,
+    "new" => :new,
     "for" => :for,
     "in" => :in,
     "fun" => :fun,

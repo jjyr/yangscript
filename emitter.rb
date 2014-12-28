@@ -25,7 +25,7 @@ module Yang
 
     def emit_env
       write "(function($env){"
-      write "var $obj_attr = $env.find_obj_attr, $_hash = $env._hash, $new_class = $env.new_class;"
+      write "var $obj_attr = $env.find_obj_attr, $_hash = $env._hash, $new_class = $env.new_class, $defun = $env.defun, $get = $env.get_attribute;"
       yield
       write "})(yangscript)"
     end
@@ -180,9 +180,16 @@ module Yang
         emit_index_access node
       when :if
         emit_if node
+      when :new
+        emit_new node
       else
         raise "cannot detect exp kind: #{node.kind}"
       end
+    end
+
+    def emit_new node
+      write "new "
+      emit_exp node.attrs[:class_exp]
     end
 
     def write_function_call fun, args = []
@@ -202,7 +209,7 @@ module Yang
       write "="
       emit_function node
       write ";"
-      write_function_call "$defun", [node.outer.attrs[:name], var]
+      write_function_call "$defun", [node.outer.attrs[:name], var.inspect, var]
     end
 
     def emit_get_attr obj, attr
@@ -258,18 +265,20 @@ module Yang
       write node.attrs[:name]
     end
 
-    def emit_access node
-      # attribute path: a.b.c.d
-      access_path = node.attrs[:attribute]
-      obj_exp = node.attrs[:object]
-      while obj_exp.kind == :access
-        access_path.unshift "."
-        access_path.unshift obj_exp.attrs[:attribute]
-        obj_exp = obj_exp.attrs[:object]
+    def write_access obj_exp, key
+      write "$get("
+      if obj_exp.kind == :access
+        write_access obj_exp.attrs[:object], obj_exp.attrs[:attribute]
+      else
+        emit_exp obj_exp
       end
-      emit_exp obj_exp
-      write "."
-      write access_path
+      write ","
+      write_string key
+      write ")"
+    end
+
+    def emit_access node
+      write_access node.attrs[:object], node.attrs[:attribute]
     end
 
 
