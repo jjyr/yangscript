@@ -62,8 +62,11 @@ module Yang
     def build_from_node node
       case node.kind
       when :assign
+        check_object_instance_var_assign node.attrs[:left]
         node.attrs[:left].kind == :id and insert node.attrs[:left], node.outer
         build_from_node node.attrs[:value]
+      when :or_assign
+        check_object_instance_var_assign node.attrs[:left]
       when :multiple_assign
         node.attrs[:left_list].each do |left_node|
           left_node.kind == :id and insert left_node, node.outer
@@ -150,6 +153,16 @@ module Yang
         build_symbol_table inner, node
       else
         analyze_error "cannot detect node kind #{node.kind}", node
+      end
+    end
+
+    def check_object_instance_var_assign node
+      if node.kind == :access
+        if !node.attrs[:attribute].start_with? "_"
+          analyze_error "cannot modify instance attributes", node
+        else
+          check_object_instance_var_assign node.attrs[:object]
+        end
       end
     end
 

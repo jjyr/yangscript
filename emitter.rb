@@ -25,7 +25,7 @@ module Yang
 
     def emit_env
       write "(function($env){"
-      write "var $obj_attr = $env.find_obj_attr, $_hash = $env._hash, $new_class = $env.new_class, $defun = $env.defun, $get = $env.get_attribute;"
+      write "var $_hash = $env._hash, $new_class = $env.new_class, $defun = $env.defun, $get = $env.get_attribute, $set_ivar = $env.set_instance_var, $get_ivar = $env.get_instance_var;"
       yield
       write "})(yangscript)"
     end
@@ -192,24 +192,19 @@ module Yang
       emit_exp node.attrs[:class_exp]
     end
 
-    def write_function_call fun, args = []
-      limit = args.size - 1
-      write fun
-      write "("
-      args.each_with_index do |arg, i|
-        write arg
-        write "," if i < limit
-      end
-      write ")"
-    end
-
     def emit_define_function node
       var = node.attrs[:name]
       write var
       write "="
       emit_function node
       write ";"
-      write_function_call "$defun", [node.outer.attrs[:name], var.inspect, var]
+      write "$defun("
+      write node.outer.attrs[:name]
+      write ","
+      write_string "$#{var}"
+      write ","
+      write var
+      write ")"
     end
 
     def emit_get_attr obj, attr
@@ -265,20 +260,34 @@ module Yang
       write node.attrs[:name]
     end
 
-    def write_access obj_exp, key
+    def emit_get_attribute obj_exp, key
       write "$get("
       if obj_exp.kind == :access
-        write_access obj_exp.attrs[:object], obj_exp.attrs[:attribute]
+        emit_get_attribute obj_exp.attrs[:object], obj_exp.attrs[:attribute]
       else
         emit_exp obj_exp
       end
       write ","
-      write_string key
+      write_string "$#{key}"
+      write ")"
+    end
+
+    def emit_instance_var_get obj, key
+      write "$get_ivar("
+      emit_exp obj
+      write ","
+      write_string "$#{key}"
       write ")"
     end
 
     def emit_access node
-      write_access node.attrs[:object], node.attrs[:attribute]
+      key = node.attrs[:attribute]
+      # start_with '_' means instance variable
+      if key.start_with? "_"
+        emit_instance_var_get node.attrs[:object], key
+      else
+        emit_get_attribute node.attrs[:object], key
+      end
     end
 
 
@@ -383,21 +392,35 @@ module Yang
       write node.attrs[:name]
     end
 
-    def emit_left node
-      case node.kind
+    def emit_var_assign left, value
+      emit_id left
+      write "="
+      emit_exp value
+    end
+
+    def emit_instance_var_set left, value
+      write "$set_ivar("
+      emit_exp left.attrs[:object]
+      write ","
+      write_string "$#{left.attrs[:attribute]}"
+      write ","
+      emit_exp value
+      write ")"
+    end
+
+    def emit_left_assign left, value
+      case left.kind
       when :id
-        emit_id node
+        emit_var_assign left, value
       when :access
-        emit_access node
+        emit_instance_var_set left, value
       else
-        raise "cannot detect left value kind: #{node.kind}"
+        raise "cannot detect left value kind: #{left.kind}"
       end
     end
 
     def emit_assign node
-      emit_left node.attrs[:left]
-      write "="
-      emit_exp node.attrs[:value]
+      emit_left_assign node.attrs[:left], node.attrs[:value]
     end
 
     def emit_multiple_assign node
@@ -413,11 +436,9 @@ module Yang
     end
 
     def emit_or_assign node
-      emit_exp node.attrs[:id]
-      write "="
-      emit_exp node.attrs[:id]
+      emit_exp node.attrs[:left]
       write "||"
-      emit_exp node.attrs[:value]
+      emit_left_assign node.attrs[:left], node.attrs[:value]
     end
 
     def emit_print node

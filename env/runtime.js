@@ -19,15 +19,15 @@
     return undefined
   }
 
-  function get_instance_key(obj, key){
-    var value = obj.$members[key];
+  function get_class_member(obj, key){
+    var value = obj.$class.$members[key];
     if(value === null || value === undefined) {
-      throw "cannot find attribute " + attr
+      throw "cannot find class member " + key
     } else {
       var bound = function(){
         value.apply(undefined, fun_args(obj, arguments))
-      }()
-      return value
+      }
+      return bound
     }
   }
 
@@ -35,15 +35,25 @@
     if(obj === undefined) {
       throw "fatal error, obj should not undefined"
     } else {
-      var klass = obj.$class
-      if (klass === Class) {
-        get_class_key(obj, key)
-      } else {
-        get_instance_key(obj, key)
-      }
+      // var klass = obj.$class
+      // if (klass === Class) {
+      //   get_class_key(obj, key)
+      // } else {
+      return get_class_member(obj, key)
+      //}
     }
   }
   env.get_attribute = get
+
+  function set_instance_var(obj, key, value){
+    obj._instance_variables[key] = value
+  }
+  env.set_instance_var = set_instance_var
+
+  function get_instance_var(obj, key){
+    return obj._instance_variables[key]
+  }
+  env.get_instance_var = get_instance_var
 
   function setup_class(name, klass,  ancestors){
     if(classes[name]) {
@@ -51,6 +61,7 @@
     }
     klass.$name = name;
     klass.$ancestors = ancestors;
+    klass.$members = {}
     klass.prototype.$class = klass
     classes[name] = klass
   }
@@ -76,7 +87,7 @@
   setup_class("Function", Function, basic_ancestors)
 
   function new_class(name, ancestors){
-    var klass = function(){this.init(this)}
+    var klass = function(){this.$init(_init_obj(this))}
     ancestors = ancestors || basic_ancestors
     setup_class(name, klass, ancestors)
     return klass
@@ -85,6 +96,7 @@
 
   function defun(klass, name, fun){
     klass.prototype[name] = fun
+    klass.$members[name] = fun
   }
   env.defun = defun
 
@@ -103,6 +115,12 @@
       }
     }
     throw "cannot find key: " + key
+  }
+
+  //object basic init
+  function _init_obj(obj){
+    obj._instance_variables = {}
+    return obj;
   }
 
   // convert js object to yangscript hash

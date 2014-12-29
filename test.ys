@@ -1,0 +1,30 @@
+class Person
+  #include(Object)
+  #include(BasePerson)
+  defun init(self) ->
+    print("called when object created")
+    self._words_to_say = "nice to meet you!"
+    print(self)
+  ;
+
+  defun hello(self) -> print("hello every one!")
+  #print(self)
+  print(self._words_to_say);
+
+  #defun say(self) ->
+  #  if super.say
+  #    super.say(self.words_to_say)
+  #    #super == BasePerson
+  #  else
+  #    puts("nothing")
+  #  ;
+  #;
+;
+
+true
+false
+nil
+person = new Person()
+person._favorite_programing_language ||= "yang"
+#person.inherited_method # -> Person -> BasePerson -> Object
+(person._nihao || person.hello)()

@@ -225,7 +225,7 @@ module Yang
     def parse_or_assign var_id
       match :or_assign
       t = stmt_node :or_assign
-      t.attrs[:id] = var_id
+      t.attrs[:left] = var_id
       t.attrs[:value] = exp
       t
     end
