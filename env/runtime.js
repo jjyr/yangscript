@@ -19,28 +19,36 @@
     return undefined
   }
 
-  function get_class_member(obj, key){
-    var value = obj.$class.$members[key];
+  function find_class_member(klass, key){
+    var value = klass.$members[key];
     if(value === null || value === undefined) {
       throw "cannot find class member " + key
-    } else {
-      var bound = function(){
-        value.apply(undefined, fun_args(obj, arguments))
-      }
-      return bound
     }
+    return value
+  }
+
+  function get_class_member(klass, key){
+    return find_class_member(klass, key)
+  }
+
+  function get_instance_bounded_member(obj, key){
+    var value = find_class_member(obj.$class, key)
+    var bound = function(){
+      value.apply(undefined, fun_args(obj, arguments))
+    }
+    return bound
   }
 
   function get(obj, key){
     if(obj === undefined) {
       throw "fatal error, obj should not undefined"
     } else {
-      // var klass = obj.$class
-      // if (klass === Class) {
-      //   get_class_key(obj, key)
-      // } else {
-      return get_class_member(obj, key)
-      //}
+      var klass = obj.$class
+      if (klass === Class) {
+         return get_class_member(obj, key)
+      } else {
+         return get_instance_bounded_member(obj, key)
+      }
     }
   }
   env.get_attribute = get
@@ -62,6 +70,7 @@
     klass.$name = name;
     klass.$ancestors = ancestors;
     klass.$members = {}
+    klass.$class = Class
     klass.prototype.$class = klass
     classes[name] = klass
   }
@@ -69,7 +78,7 @@
   function Class(){}
   var object = function(){};
   object.$class = Class
-  object.prototype.$class = Class
+  object.prototype.$class = object
 
   setup_class('Object', object, []);
   //Number.hehe

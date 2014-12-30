@@ -31,3 +31,5 @@ person = new Person()
 person._favorite_programing_language ||= "yang"
 #person.inherited_method # -> Person -> BasePerson -> Object
 (person._nihao || person.hello)()
+print("lets try another way to call instance function")
+Person.hello(person)
