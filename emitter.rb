@@ -425,13 +425,21 @@ module Yang
 
     def emit_multiple_assign node
       var_list = node.attrs[:left_list]
-      node.attrs[:values].each_with_index do |exp_node, i|
-        if var = var_list[i]
-          write var.attrs[:name]
-          write "="
-        end
+      t_var = tmp_var node.outer
+      write t_var
+      write "="
+      write "["
+      values = node.attrs[:values]
+      values.each_with_index do |exp_node, i|
         emit_exp exp_node
-        write ";" if var_list.size > i
+        write "," if values.size - 1 > i
+      end
+      write "];"
+      var_list.each do |var|
+        write var.attrs[:name]
+        write "="
+        write t_var
+        write ".shift();"
       end
     end
 

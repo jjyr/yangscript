@@ -6,7 +6,7 @@ class Person
     self._words_to_say = "nice to meet you!"
     print(self)
   ;
-
+print("class context")
   defun hello(self) -> print("hello every one!")
   #print(self)
   print(self._words_to_say);
@@ -20,7 +20,10 @@ class Person
   #  ;
   #;
 ;
-
+a, b = 1, 2
+b, a = a, b
+print(a)
+print(b)
 true
 false
 nil
