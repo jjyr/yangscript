@@ -25,7 +25,7 @@ module Yang
 
     def emit_env
       write "(function($env){"
-      write "var $_hash = $env._hash, $new_class = $env.new_class, $defun = $env.defun, $get = $env.get_attribute, $set_ivar = $env.set_instance_var, $get_ivar = $env.get_instance_var;"
+      write "var $_hash = $env._hash, $_bool = $env._bool, $new_class = $env.new_class, $defun = $env.defun, $get = $env.get_attribute, $set_ivar = $env.set_instance_var, $get_ivar = $env.get_instance_var;"
       yield
       write "})(yangscript)"
     end
@@ -152,7 +152,9 @@ module Yang
           end
           break
         end
+        write "$_bool("
         emit_exp(branch[:condition])
+        write ")"
         write "?"
         emit_seq(branch[:body], ",", false)
         write ":"
@@ -227,6 +229,10 @@ module Yang
         write "+"
       when :or
         write "||"
+      when :gt
+        write ">"
+      when :eq
+        write "==="
       else
         raise "cannot detect operator #{op}"
       end

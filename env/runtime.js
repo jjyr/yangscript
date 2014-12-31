@@ -96,7 +96,10 @@
   setup_class("Function", Function, basic_ancestors)
 
   function new_class(name, ancestors){
-    var klass = function(){this.$init(_init_obj(this))}
+    var klass = function(){
+      var self = _init_obj(this)
+      this.$init.apply(undefined, fun_args(self, arguments))
+    }
     ancestors = ancestors || basic_ancestors
     setup_class(name, klass, ancestors)
     return klass
@@ -131,6 +134,19 @@
     obj._instance_variables = {}
     return obj;
   }
+
+  // convert object to boolean
+  function _bool(obj){
+    if(obj === null || obj === false) {
+      return false
+    } else if(obj == undefined){
+      throw "object should not undefined"
+    } else {
+      return true
+    }
+  }
+
+  env._bool = _bool
 
   // convert js object to yangscript hash
   function _hash(obj, keys){

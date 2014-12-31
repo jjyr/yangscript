@@ -1,9 +1,10 @@
 class Person
   #include(Object)
   #include(BasePerson)
-  defun init(self) ->
+  defun init(self, age) ->
     print("called when object created")
     self._words_to_say = "nice to meet you!"
+    self._age = age
     print(self)
   ;
 print("class context")
@@ -27,9 +28,15 @@ print(b)
 true
 false
 nil
-person = new Person()
+person = new Person(23)
 person._favorite_programing_language ||= "yang"
 #person.inherited_method # -> Person -> BasePerson -> Object
 (person._nihao || person.hello)()
 print("lets try another way to call instance function")
 Person.hello(person)
+
+if(person._age > 22)
+print("you need earn much money")
+else
+print("you need a girl friend")
+;
