@@ -1,3 +1,7 @@
+print = fun(str) ->
+  `console.log(@{str})`
+;
+
 class Person
   #include(Object)
   #include(BasePerson)

@@ -1,17 +1,86 @@
 require './lexer_helper'
-require './utils'
+require './common'
+require './external_lexer'
 
 module Yang
-  class Lexer < LexerBase
+  class Lexer
+
+    include LexerHelper
+
+    DEFAULT_OPTIONS = {trace_scan: false}.freeze
+
+    attr_reader :line_no, :token, :token_str, :current_minor_lexer
+
+    def initialize source, options = {}
+      options = DEFAULT_OPTIONS.merge options
+      @line = nil
+      @line_index = 0
+      @line_no = 0
+      @line_size = 0
+      @eof_flag = false
+      @trace_scan = options[:trace_scan]
+      @source = source.dup
+      @minor_lexers = {}
+      register_minor_lexer :external_lexer, ExternalLexer
+    end
+
+    def register_minor_lexer name, klass
+      @minor_lexers[name] = klass.new(self)
+    end
+
+    def use_minor_lexer lexer
+      @current_minor_lexer = @minor_lexers[lexer]
+      @current_minor_lexer.nil? and raise "cannot find minor lexer #{lexer}"
+    end
+
+    def use_main_lexer
+      @current_minor_lexer = nil
+    end
+
+    def get_next_char
+      if @line_size > 0 && @line_index == @line_size
+        @line_index += 1
+        '\n'
+      elsif @line_index >= @line_size
+        @line_no += 1
+        if @line = @source[@line_no - 1]
+          @line_size = @line.size
+          @line_index = 0
+          @line_index += 1
+          @line[@line_index - 1]
+        else
+          @eof_flag = true;
+          nil
+        end
+      else
+        @line_index += 1
+        @line[@line_index - 1]
+      end
+    end
+
+    def put_char_back
+      @line_index -= 1 if !@eof_flag
+    end
+
     def reserved_lookup id
       RESERVED_WORDS[id] || :id
     end
 
     def next_token
+      token = token_str = nil
+      if lexer = current_minor_lexer
+        token, token_str = lexer.next_token
+      else
+        token, token_str = _next_token
+      end
+
+      @token, @token_str = token, token_str
+    end
+
+    def _next_token
       state = :start
       save = true
       token = nil
-      token_str_index = 0
       token_str = ""
 
       while(state != :done)
@@ -26,9 +95,6 @@ module Yang
           elsif (c == '"')
             save = false
             state = :instr
-          elsif (c == '`')
-            save = false
-            state = :inbackquote
           elsif (c == '=')
             state = :ineq
           elsif(c == '&')
@@ -46,6 +112,11 @@ module Yang
             when nil
               save = false
               token = :endfile
+            when '`'
+              token = :external_begin
+              use_minor_lexer :external_lexer
+            when '@'
+              token = :at
             when '<'
               token = :lt
             when '>'
@@ -103,21 +174,21 @@ module Yang
           if(c == '=')
             token = :eq
           else
-            put_back_char
+            put_char_back
             save = false
             token = :assign
           end
         when :innum
           if (!isdigit(c))
             save = false
-            put_back_char
+            put_char_back
             token = :num
             state = :done
           end
         when :inid
           if(!isalpha(c))
             save = false
-            put_back_char
+            put_char_back
             token = :id
             state = :done
           end
@@ -125,12 +196,6 @@ module Yang
           if(c == '"')
             save = false
             token = :string
-            state = :done
-          end
-        when :inbackquote
-          if (c == '`')
-            save = false
-            token = :external
             state = :done
           end
         when :inand
@@ -175,7 +240,7 @@ module Yang
         Utils.print_token token, token_str
       end
 
-      @token, @token_str = token, token_str
+      [token, token_str]
     end
   end
 end

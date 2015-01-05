@@ -6,7 +6,7 @@ module Yang
     "while" => :while,
     "break" => :break,
     "return" => :return,
-    "print" => :print,
+    #"print" => :print,
     "class" => :class,
     "new" => :new,
     "for" => :for,

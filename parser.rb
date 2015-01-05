@@ -318,7 +318,30 @@ module Yang
       t = exp_node :new
       match :new
       t.attrs[:class_exp] = exp
-      return t
+      t
+    end
+
+    def parse_external
+      t = exp_node :external
+      match :external_begin
+      contents = []
+      while token != :external_end
+        case token
+        when :external_fragment
+          fragment = exp_node :external_fragment
+          fragment.attrs[:content] = token_str
+          contents << fragment
+        else
+          match :at
+          match :lbrace
+          contents << exp
+          match :rbrace
+        end
+        match token
+      end
+      t.attrs[:content] = contents
+      match :external_end
+      t
     end
 
     def print_stmt
@@ -451,6 +474,8 @@ module Yang
         parse_new
       when :if
         parse_if_exp
+      when :external_begin
+        parse_external
       else
         syntax_error
       end

@@ -184,9 +184,14 @@ module Yang
         emit_if node
       when :new
         emit_new node
+      when :external
+        emit_external node
       else
         raise "cannot detect exp kind: #{node.kind}"
       end
+    end
+
+    def emit_external node
     end
 
     def emit_new node
