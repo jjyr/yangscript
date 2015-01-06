@@ -331,15 +331,15 @@ module Yang
           fragment = exp_node :external_fragment
           fragment.attrs[:content] = token_str
           contents << fragment
+          match :external_fragment
         else
           match :at
           match :lbrace
           contents << exp
           match :rbrace
         end
-        match token
       end
-      t.attrs[:content] = contents
+      t.attrs[:contents] = contents
       match :external_end
       t
     end

@@ -192,6 +192,14 @@ module Yang
     end
 
     def emit_external node
+      node.attrs[:contents].each do |i|
+        case i.kind
+        when :external_fragment
+          write i.attrs[:content]
+        else
+          emit_exp i
+        end
+      end
     end
 
     def emit_new node
