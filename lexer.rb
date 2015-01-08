@@ -5,11 +5,19 @@ require './external_lexer'
 module Yang
   class Lexer
 
+    class Token
+      attr_accessor :token, :token_str, :current_token_char_count
+
+      def initialize token, token_str, current_token_char_count
+        @token, @token_str, @current_token_char_count = token, token_str, current_token_char_count
+      end
+    end
+
     include LexerHelper
 
     DEFAULT_OPTIONS = {trace_scan: false}.freeze
 
-    attr_reader :line_no, :token, :token_str, :current_minor_lexer
+    attr_reader :line_no, :current_minor_lexer
 
     def initialize source, options = {}
       options = DEFAULT_OPTIONS.merge options
@@ -17,6 +25,7 @@ module Yang
       @line_index = 0
       @line_no = 0
       @line_size = 0
+      @current_token_char_count = 0
       @eof_flag = false
       @trace_scan = options[:trace_scan]
       @source = source.dup
@@ -25,7 +34,9 @@ module Yang
     end
 
     def register_minor_lexer name, klass
-      @minor_lexers[name] = klass.new(self)
+      lexer = klass.new(self)
+      lexer.name = name
+      @minor_lexers[name] = lexer
     end
 
     def use_minor_lexer lexer
@@ -35,6 +46,23 @@ module Yang
 
     def use_main_lexer
       @current_minor_lexer = nil
+    end
+
+    def use_lexer lexer
+      if lexer
+        use_minor_lexer lexer
+      else
+        use_main_lexer
+      end
+    end
+
+    def use_lexer_in_context lexer
+      old_lexer = current_minor_lexer
+      old_lexer = current_minor_lexer.name if current_minor_lexer
+      use_lexer lexer
+      result = yield
+      use_lexer old_lexer
+      result
     end
 
     def get_next_char
@@ -47,34 +75,59 @@ module Yang
           @line_size = @line.size
           @line_index = 0
           @line_index += 1
+          @current_token_char_count += 1
           @line[@line_index - 1]
         else
           @eof_flag = true;
           nil
         end
       else
+        @current_token_char_count += 1
         @line_index += 1
         @line[@line_index - 1]
       end
     end
 
     def put_char_back
-      @line_index -= 1 if !@eof_flag
+      if !@eof_flag
+        @line_index -= 1
+        @current_token_char_count -= 1
+      end
     end
 
     def reserved_lookup id
       RESERVED_WORDS[id] || :id
     end
 
+    def token_str
+      @last_token.token_str
+    end
+
+    def token
+      @last_token.token
+    end
+
     def next_token
       token = token_str = nil
+      @current_token_char_count = 0
       if lexer = current_minor_lexer
         token, token_str = lexer.next_token
       else
         token, token_str = _next_token
       end
 
-      @token, @token_str = token, token_str
+      @last_token = Token.new token, token_str, @current_token_char_count
+    end
+
+    def back_token
+      @last_token.current_token_char_count.times do
+        put_char_back
+      end
+    end
+
+    def retoken
+      back_token
+      next_token
     end
 
     def _next_token
@@ -113,8 +166,7 @@ module Yang
               save = false
               token = :endfile
             when '`'
-              token = :external_begin
-              use_minor_lexer :external_lexer
+              token = :backquote
             when '@'
               token = :at
             when '<'

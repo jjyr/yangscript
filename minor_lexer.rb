@@ -1,5 +1,8 @@
 module Yang
   module MinorLexer
+
+    attr_accessor :name
+    
     def initialize main_parser
       @main = main_parser
     end

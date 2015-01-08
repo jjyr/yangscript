@@ -76,9 +76,9 @@ module Yang
       t
     end
 
-    def match expected
+    def match expected, read_token = true
       if token == expected
-        next_token
+        read_token and next_token
       else
         syntax_error
       end
@@ -321,26 +321,36 @@ module Yang
       t
     end
 
+    def keep_state_during_embed &block
+      @lexer.current_minor_lexer.keep_state_during_embed &block
+    end
+
     def parse_external
       t = exp_node :external
-      match :external_begin
-      contents = []
-      while token != :external_end
-        case token
-        when :external_fragment
-          fragment = exp_node :external_fragment
-          fragment.attrs[:content] = token_str
-          contents << fragment
-          match :external_fragment
-        else
-          match :at
-          match :lbrace
-          contents << exp
-          match :rbrace
+      @lexer.use_lexer_in_context :external_lexer do
+        match :backquote
+        contents = []
+        while token != :backquote
+          case token
+          when :external_fragment
+            fragment = exp_node :external_fragment
+            fragment.attrs[:content] = token_str
+            contents << fragment
+            match :external_fragment
+          else
+            match :at
+            match :lbrace
+            keep_state_during_embed do
+              contents << exp
+            end
+            match :rbrace
+          end
         end
+        t.attrs[:contents] = contents
+        # skip next_token, to prevent external lexer match
+        match :backquote, false
       end
-      t.attrs[:contents] = contents
-      match :external_end
+      next_token
       t
     end
 
@@ -474,7 +484,7 @@ module Yang
         parse_new
       when :if
         parse_if_exp
-      when :external_begin
+      when :backquote
         parse_external
       else
         syntax_error
@@ -498,17 +508,16 @@ module Yang
       t
     end
 
-    def back_token
-      @token_buffer.push [@token, @token_str]
+    def token
+      @lexer.token
+    end
+
+    def token_str
+      @lexer.token_str
     end
 
     def next_token
-      if @token_buffer.empty?
-        @lexer.next_token
-        @token, @token_str = @lexer.token, @lexer.token_str
-      else
-        @token, @token_str = @token_buffer.pop
-      end
+      @lexer.next_token
     end
 
     def syntax_error

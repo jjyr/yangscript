@@ -1,5 +1,5 @@
 print = fun(str) ->
-  `console.log(@{str})`
+  `console.log(@{`"output:" + @{str}`})`
 ;
 
 class Person

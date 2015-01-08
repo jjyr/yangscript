@@ -1,23 +1,6 @@
 require './minor_lexer'
 
 module Yang
-  class EmbedResult
-    def initialize token, token_str
-      case token
-      when :raw
-        @raw = true
-      when :embed
-        @embed = true
-      else
-        raise "embed parser result error, token: #{token}, token_str: #{token_str}"
-      end
-      @value = token_str
-    end
-
-    attr_reader :raw, :embed
-    attr_accessor :value
-  end
-
   class EmbedLexer
     include MinorLexer
 
@@ -25,6 +8,20 @@ module Yang
       super(main)
       @external_end = external_end
       @init_state = :start
+    end
+
+    def keep_state
+      init_state, @init_state = @init_state, :start
+      result = yield
+      @init_state = init_state
+      @main.retoken # retoken to use correct lexer
+      result
+    end
+
+    def get_next_char
+      char = super
+      char.nil? and raise "syntax error, cannot find terminator '#{@external_end}'"
+      char
     end
 
     def detect_embed_start
