@@ -122,7 +122,7 @@
   hash_class.prototype["$[]"] = function(key){
     var keys = this._keys
     for(var i = 0; i < keys.length; i++){
-      if(keys[i] == key) {
+      if(keys[i] === key) {
         return this._hash_obj[key]
       }
     }
@@ -139,7 +139,7 @@
   function _bool(obj){
     if(obj === null || obj === false) {
       return false
-    } else if(obj == undefined){
+    } else if(obj === undefined){
       throw "object should not undefined"
     } else {
       return true
