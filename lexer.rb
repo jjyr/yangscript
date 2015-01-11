@@ -65,21 +65,40 @@ module Yang
       result
     end
 
+    def next_line
+      @line_no += 1
+      if @line = @source[@line_no - 1]
+        @line_size = @line.size
+        @line_index = 0
+      else
+        @eof_flag = true;
+        nil
+      end
+    end
+
+    def prev_line
+      @eof_flag and return
+      @line_no -= 1
+      if @line = @source[@line_no - 1]
+        @line_size = @line.size
+        @line_index = @line.size
+      else
+        raise "can not read line no #{@line_no}"
+      end
+    end
+
     def get_next_char
       if @line_size > 0 && @line_index == @line_size
         @line_index += 1
         @current_token_char_count += 1
         '\n'
       elsif @line_index >= @line_size
-        @line_no += 1
-        if @line = @source[@line_no - 1]
-          @line_size = @line.size
-          @line_index = 0
+        next_line
+        if !@eof_flag
           @line_index += 1
           @current_token_char_count += 1
           @line[@line_index - 1]
         else
-          @eof_flag = true;
           nil
         end
       else
@@ -93,6 +112,9 @@ module Yang
       if !@eof_flag
         @line_index -= 1
         @current_token_char_count -= 1
+        if @line_index == 0
+          prev_line
+        end
       end
     end
 
