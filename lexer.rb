@@ -68,6 +68,7 @@ module Yang
     def get_next_char
       if @line_size > 0 && @line_index == @line_size
         @line_index += 1
+        @current_token_char_count += 1
         '\n'
       elsif @line_index >= @line_size
         @line_no += 1
@@ -123,10 +124,14 @@ module Yang
       @last_token = Token.new token, token_str, @current_token_char_count
     end
 
-    def back_token token = nil
-      (token || @last_token).current_token_char_count.times do
+    def back_token
+      @last_token.current_token_char_count.times do
         put_char_back
       end
+    end
+
+    def set_current token
+      @last_token = token
     end
 
     def retoken

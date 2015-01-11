@@ -58,11 +58,41 @@ module Yang
     end
   end
 
+  class SafeParser
+
+    def initialize parser
+      @parser = parser
+      @parse_error = false
+      @matched = []
+    end
+
+    attr_reader :parse_error
+
+    def match expected
+      return if @parse_error
+      if expected != @parser.token
+        @parse_error = true
+        return
+      end
+      @matched << @parser.lexer.token_info
+      @parser.match(expected)
+    end
+
+    def resume
+      @parser.lexer.back_token
+      limit = @matched.count - 1
+      @matched.reverse.each_with_index do |t, i|
+        @parser.lexer.set_current t
+        @parser.lexer.back_token if i < limit
+      end
+    end
+  end
+
   class Parser
 
     include ParserHelper
 
-    attr_reader :token, :token_str
+    attr_reader :token, :token_str, :lexer
 
     def parse lexer
       @lexer = lexer
@@ -249,42 +279,27 @@ module Yang
       t
     end
 
-    def parse_function_param_list raise_error = true
+    def try_parse_function_param_list
       params = []
-      matched = []
-      parse_error = false
-      match = ->(expected){
-        return if parse_error
-        if expected != token
-          parse_error = true
-          return
-        end
-        matched << @lexer.token_info
-        match(expected)
-      }
+      sp = SafeParser.new self
 
-      match.(:lparen)
-      while (token != :rparen) && !parse_error
+      sp.match :lparen
+      while (token != :rparen) && !sp.parse_error
         if params.size != 0
-          match.(:comma)
+          sp.match(:comma)
         end
         params << token_str
-        match.(:id)
+        sp.match(:id)
       end
-      match.(:rparen)
+      sp.match(:rparen)
 
-      if parse_error
-        raise_error and syntax_error
-        matched.reverse.each{|t| @lexer.back_token(t)}
-        @lexer.retoken
-        false
-      else
-        params
-      end
+      [params, sp]
     end
 
-    def try_parse_function_param_list
-      parse_function_param_list false
+    def parse_function_param_list
+      params, sp = try_parse_function_param_list
+      sp.parse_error and syntax_error
+      params
     end
 
     def define_function_stmt
@@ -511,10 +526,11 @@ module Yang
 
     def try_parse_lambda_or_in_paren_exp
       t = nil
-      params = try_parse_function_param_list
-      if params && token == :arrow
+      params, sp = try_parse_function_param_list
+      if !sp.parse_error && token == :arrow
         t = parse_lambda params
       else
+        sp.resume
         match :lparen
         t = exp
         match :rparen

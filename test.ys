@@ -32,6 +32,7 @@ print(b)
 true
 false
 nil
+(a)
 person = new Person(23)
 person._favorite_programing_language ||= "yang"
 #person.inherited_method # -> Person -> BasePerson -> Object
