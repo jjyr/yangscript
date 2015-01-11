@@ -5,18 +5,18 @@ print = (str) ->
 class Person
   #include(Object)
   #include(BasePerson)
-  defun init(self, age) ->
+  def init(self, age) ->
     print("called when object created")
     self._words_to_say = "nice to meet you!"
     self._age = age
     print(self)
   ;
 print("class context")
-  defun hello(self) -> print("hello every one!")
+  def hello(self) -> print("hello every one!")
   #print(self)
   print(self._words_to_say);
 
-  #defun say(self) ->
+  #def say(self) ->
   #  if super.say
   #    super.say(self.words_to_say)
   #    #super == BasePerson

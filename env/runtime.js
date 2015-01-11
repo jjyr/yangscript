@@ -106,11 +106,11 @@
   }
   env.new_class = new_class
 
-  function defun(klass, name, fun){
+  function def(klass, name, fun){
     klass.prototype[name] = fun
     klass.$members[name] = fun
   }
-  env.defun = defun
+  env.def = def
 
   function fun_args(self, args){
     var result = Array.prototype.slice.call(args);

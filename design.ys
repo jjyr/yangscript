@@ -1,6 +1,6 @@
 a = 1
 #global
-a = fun(x, b) -> x + b;
+a = (x, b) -> x + b;
 
 b = [1,2,3].map(a)
 a, b = b, a, 3
@@ -27,7 +27,7 @@ result, value = has_get(b, 1)
 #set(b, 1)
 #b.xxx
 #nil
-fun test_func(a, b) ->
+def test_func(a, b) ->
   a = clone(a)
   for k in keys(b)
     v = b.get(k)
@@ -39,20 +39,20 @@ fun test_func(a, b) ->
   ;
 ;
 
-test_func = fun()->;
+test_func = ()->;
 
 class Person
   #include(Object)
   include(BasePerson)
 
-  fun init(self) ->
+  def init(self) ->
     puts("called when object created")
     self.words_to_say = "nice to meet you!"
   ;
 
-  fun hello(self) -> puts("hello every one!");
+  def hello(self) -> puts("hello every one!");
 
-  fun say(self) ->
+  def say(self) ->
     if super.say
       super.say(self.words_to_say)
       #super == BasePerson

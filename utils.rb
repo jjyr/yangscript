@@ -77,7 +77,7 @@ module Yang
 							puts "bool: #{tree.attrs[:val]}"
 					when :id
 						puts "id: #{tree.attrs[:name]}"
-					when :fun_call
+					when :call
 						puts "fun_call: "
 						print_space(indent + 2)
 						print "function: "

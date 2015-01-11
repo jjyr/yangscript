@@ -128,7 +128,7 @@ module Yang
         print_stmt
       when :class
         class_stmt
-      when :defun
+      when :def
         define_function_stmt
       else
         parse_assignment_or_exp
@@ -231,7 +231,7 @@ module Yang
     end
 
     def parse_function_call fun_exp
-      t = exp_node :fun_call
+      t = exp_node :call
       match :lparen
       t.attrs[:params] = parse_parameter_list
       match :rparen
@@ -264,7 +264,7 @@ module Yang
       }
 
       match.(:lparen)
-      while (token != :rparen)
+      while (token != :rparen) && !parse_error
         if params.size != 0
           match.(:comma)
         end
@@ -276,6 +276,7 @@ module Yang
       if parse_error
         raise_error and syntax_error
         matched.reverse.each{|t| @lexer.back_token(t)}
+        @lexer.retoken
         false
       else
         params
@@ -287,14 +288,13 @@ module Yang
     end
 
     def define_function_stmt
-      match :defun
+      match :def
       t = nil
       t = stmt_node :define_function
       t.attrs[:name] = token_str
       match :id
       t.attrs[:params] = parse_function_param_list
-      match :dash
-      match :gt
+      match :arrow
       t.children[0] = stmt_sequence
       match :semi
       t

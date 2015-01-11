@@ -25,7 +25,7 @@ module Yang
     end
 
     def search_function_params node, key
-      if node.kind == :function || node.attrs[:type] == :fun
+      if node.kind == :function || node.attrs[:type] == :lambda
         node.attrs[:params].include? key
       else
         false
@@ -80,11 +80,11 @@ module Yang
         end
       when :literal
         case node.attrs[:type]
-        when :fun
+        when :lambda
           trans_function node
           build_inner_node node
         end
-      when :fun_call
+      when :call
         build_from_node(node.children[0])
       when :define_function
         if node.outer.kind != :class
@@ -148,7 +148,7 @@ module Yang
     end
 
     def build_inner_node node
-      if [:class, :define_function].include?(node.kind) || (node.kind == :literal && node.attrs[:type] == :fun)
+      if [:class, :define_function].include?(node.kind) || (node.kind == :literal && node.attrs[:type] == :lambda)
         inner = node.children[0]
         build_symbol_table inner, node
       else

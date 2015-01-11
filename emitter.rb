@@ -25,7 +25,7 @@ module Yang
 
     def emit_env
       write "(function($env){"
-      write "var $_hash = $env._hash, $_bool = $env._bool, $new_class = $env.new_class, $defun = $env.defun, $get = $env.get_attribute, $set_ivar = $env.set_instance_var, $get_ivar = $env.get_instance_var;"
+      write "var $_hash = $env._hash, $_bool = $env._bool, $new_class = $env.new_class, $def = $env.def, $get = $env.get_attribute, $set_ivar = $env.set_instance_var, $get_ivar = $env.get_instance_var;"
       yield
       write "})(yangscript)"
     end
@@ -67,8 +67,6 @@ module Yang
         emit_print node
       when :class
         emit_class node
-      when :defun
-        emit_defun node
       when :assign
         emit_assign node
       when :multiple_assign
@@ -176,7 +174,7 @@ module Yang
         emit_access node
       when :operator
         emit_operator node
-      when :fun_call
+      when :call
         emit_function_call node
       when :index_access
         emit_index_access node
@@ -211,9 +209,9 @@ module Yang
       var = node.attrs[:name]
       write var
       write "="
-      emit_function node
+      emit_lambda node
       write ";"
-      write "$defun("
+      write "$def("
       write node.outer.attrs[:name]
       write ","
       write_string "$#{var}"
@@ -330,8 +328,8 @@ module Yang
       case node.attrs[:type]
       when :num
         emit_num node
-      when :fun
-        emit_function node
+      when :lambda
+        emit_lambda node
       when :array
         emit_array node
       when :string
@@ -359,7 +357,7 @@ module Yang
       write node.attrs[:val].to_s
     end
 
-    def emit_function node
+    def emit_lambda node
       write "function("
       write node.attrs[:params].join(",")
       write "){"
