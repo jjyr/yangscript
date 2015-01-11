@@ -10,7 +10,6 @@ module Yang
     "new" => :new,
     "for" => :for,
     "in" => :in,
-    "fun" => :fun,
     "defun" => :defun,
     "true" => :true,
     "false" => :false,

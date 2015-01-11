@@ -249,16 +249,41 @@ module Yang
       t
     end
 
-    def parse_function_param_list
+    def parse_function_param_list raise_error = true
       params = []
-      match :lparen
+      matched = []
+      parse_error = false
+      match = ->(expected){
+        return if parse_error
+        if expected != token
+          parse_error = true
+          return
+        end
+        matched << @lexer.token_info
+        match(expected)
+      }
+
+      match.(:lparen)
       while (token != :rparen)
-        match :comma if params.size != 0
+        if params.size != 0
+          match.(:comma)
+        end
         params << token_str
-        match :id
+        match.(:id)
       end
-      match :rparen
-      params
+      match.(:rparen)
+
+      if parse_error
+        raise_error and syntax_error
+        matched.reverse.each{|t| @lexer.back_token(t)}
+        false
+      else
+        params
+      end
+    end
+
+    def try_parse_function_param_list
+      parse_function_param_list false
     end
 
     def define_function_stmt
@@ -267,19 +292,6 @@ module Yang
       t = stmt_node :define_function
       t.attrs[:name] = token_str
       match :id
-      t.attrs[:params] = parse_function_param_list
-      match :dash
-      match :gt
-      t.children[0] = stmt_sequence
-      match :semi
-      t
-    end
-
-    def parse_function
-      match :fun
-      t = nil
-      t = exp_node :literal
-      t.attrs[:type] = :fun
       t.attrs[:params] = parse_function_param_list
       match :dash
       match :gt
@@ -446,8 +458,11 @@ module Yang
         t.attrs[:val] = :nil
         match :nil
         t
-      when :fun
-        parse_function
+      when :id
+        t = exp_node :id
+        t.attrs[:name] = token_str
+        match :id
+        t
       when :num
         t = exp_node :literal
         t.attrs[:type] = :num
@@ -466,16 +481,6 @@ module Yang
         t.attrs[:val] = token_str
         match :string
         t
-      when :id
-        t = exp_node :id
-        t.attrs[:name] = token_str
-        match :id
-        t
-      when :lparen
-        match :lparen
-        t = exp
-        match :rparen
-        t
       when :lbracket
         parse_array
       when :lbrace
@@ -486,9 +491,36 @@ module Yang
         parse_if_exp
       when :backquote
         parse_external
+      when :lparen
+        try_parse_lambda_or_in_paren_exp
       else
         syntax_error
       end
+    end
+
+    def parse_lambda params
+      match :arrow
+      t = nil
+      t = exp_node :literal
+      t.attrs[:type] = :lambda
+      t.attrs[:params] = params
+      t.children[0] = stmt_sequence
+      match :semi
+      t
+    end
+
+    def try_parse_lambda_or_in_paren_exp
+      t = nil
+      params = try_parse_function_param_list
+      if params && token == :arrow
+        t = parse_lambda params
+      else
+        match :lparen
+        t = exp
+        match :rparen
+        t
+      end
+      t
     end
 
     def suffixed_exp

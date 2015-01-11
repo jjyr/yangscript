@@ -107,6 +107,10 @@ module Yang
       @last_token.token
     end
 
+    def token_info
+      @last_token
+    end
+
     def next_token
       token = token_str = nil
       @current_token_char_count = 0
@@ -119,8 +123,8 @@ module Yang
       @last_token = Token.new token, token_str, @current_token_char_count
     end
 
-    def back_token
-      @last_token.current_token_char_count.times do
+    def back_token token = nil
+      (token || @last_token).current_token_char_count.times do
         put_char_back
       end
     end
@@ -154,6 +158,8 @@ module Yang
             state = :inand
           elsif(c == '|')
             state = :inor
+          elsif(c == '-')
+            state = :inarrow
           elsif(isblank c)
             save = false
           elsif (c == '#')
@@ -187,8 +193,6 @@ module Yang
               token = :rbrace
             when '+'
               token = :plus
-            when '-'
-              token = :dash
             when '*'
               token = :star
             when '/'
@@ -265,6 +269,15 @@ module Yang
             state = :done
             save = false
             token = :b_or
+          end
+        when :inarrow
+          state = :done
+          if(c == '>')
+            token = :arrow
+          else
+            put_back_char
+            save = false
+            token = :dash
           end
         when :inor_assign
           state = :done

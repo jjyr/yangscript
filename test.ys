@@ -1,4 +1,4 @@
-print = fun(str) ->
+print = (str) ->
   `console.log(@{`"output:" + @{str}`})`
 ;
 
