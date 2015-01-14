@@ -62,11 +62,11 @@ module Yang
     def build_from_node node
       case node.kind
       when :assign
-        check_object_instance_var_assign node.attrs[:left]
+        #check_object_instance_var_assign node.attrs[:left]
         node.attrs[:left].kind == :id and insert node.attrs[:left], node.outer
         build_from_node node.attrs[:value]
       when :or_assign
-        check_object_instance_var_assign node.attrs[:left]
+        #check_object_instance_var_assign node.attrs[:left]
       when :multiple_assign
         node.attrs[:left_list].each do |left_node|
           left_node.kind == :id and insert left_node, node.outer
@@ -87,14 +87,8 @@ module Yang
       when :call
         build_from_node(node.children[0])
       when :define_function
-        if node.outer.kind != :class
-          analyze_error "named function can only defined in class context", node
-        end
         trans_function node
         node.attrs[:name] and insert_table node.attrs[:name], node.outer, node
-        build_inner_node node
-      when :class
-        insert_table node.attrs[:name], node.outer, node
         build_inner_node node
       end
     end

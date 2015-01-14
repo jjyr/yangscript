@@ -114,6 +114,15 @@ module Yang
       end
     end
 
+
+    def match_one *tokens
+      if tokens.include? token
+        match token
+      else
+        syntax_error
+      end
+    end
+
     STOP_TOKENS = [:semi].freeze
 
     def stmt_sequence stop_tokens=STOP_TOKENS
@@ -154,12 +163,6 @@ module Yang
         break_stmt
       when :return
         return_stmt
-      when :print
-        print_stmt
-      when :class
-        class_stmt
-      when :def
-        define_function_stmt
       else
         parse_assignment_or_exp
       end
@@ -207,12 +210,10 @@ module Yang
       t
     end
 
-    def class_stmt
-      t = stmt_node :class
+    def parse_class
+      t = exp_node :class
       match :class
-      t.attrs[:name] = token_str
-      t.children[0] = stmt_sequence
-      match :semi
+      t.attrs[:content] = parse_object
       t
     end
 
@@ -315,20 +316,28 @@ module Yang
       t
     end
 
-    def parse_hash
+    def match_pair start_t, end_t
+      match start_t
+      trim_empty_lines
+      while token != end_t
+        yield
+        trim_empty_lines
+      end
+      match end_t
+    end
+
+    def parse_object
       t = exp_node :literal
-      t.attrs[:type] = :hash
-      match :lbrace
-      hash_value = {}
-      while token != :rbrace
+      t.attrs[:type] = :object
+      value = {}
+      match_pair(:lbrace, :rbrace) do
         key = token_str
         match :id
         match :colon
-        hash_value[key] = exp
-        match :comma if token != :rbrace
+        value[key] = exp
+        match_one(:comma, :newline) if token != :rbrace
       end
-      match :rbrace
-      t.attrs[:val] = hash_value
+      t.attrs[:val] = value
       t
     end
 
@@ -438,6 +447,21 @@ module Yang
       t
     end
 
+    def parse_delegate obj_exp
+      t = exp_node :delegate
+      match :at
+      t.attrs[:object] = obj_exp
+      t.attrs[:target] = primary_exp
+      keys = []
+      match_pair(:lbrace, :rbrace) do
+        key = token_str
+        match :id
+        keys << key
+        match_one(:comma, :newline) if token != :rbrace
+      end
+      t.attrs[:keys] = keys
+      t
+    end
 
     IF_STOP_TOKENS = [:elsif, :else, :semi].freeze
     def parse_if_exp
@@ -500,6 +524,8 @@ module Yang
         parse_array
       when :lbrace
         parse_hash
+      when :class
+        parse_class
       when :new
         parse_new
       when :if
@@ -545,6 +571,8 @@ module Yang
       loop do
         if token == :dot
           t = parse_attribute_access t
+        elsif token == :at
+          t = parse_delegate t
         elsif token == :lparen
           t = parse_function_call t
         elsif token == :lbracket

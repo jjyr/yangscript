@@ -2,29 +2,33 @@ print = (str) ->
   `console.log(@{`"output:" + @{str}`})`
 ;
 
-class Person
-  #include(Object)
-  #include(BasePerson)
-  def init(self, age) ->
-    print("called when object created")
-    self._words_to_say = "nice to meet you!"
-    self._age = age
-    print(self)
-  ;
-print("class context")
-  def hello(self) -> print("hello every one!")
-  #print(self)
-  print(self._words_to_say);
+Base = class {
+init: (self) ->
+print("object created")
+# dont forget
+self;
 
-  #def say(self) ->
-  #  if super.say
-  #    super.say(self.words_to_say)
-  #    #super == BasePerson
-  #  else
-  #    puts("nothing")
-  #  ;
-  #;
+hello: (self) ->
+print("just hello");
+}
+
+Person = class {
+init: (self, age) ->
+  print("called when object created")
+  self._words_to_say = "nice to meet you!"
+  self._age = age
+  print("access class variable from instance")
+  print(Person.class_variable)
+  print(self)
+  base = new Base()
+  self@base{init}
 ;
+hello: (self) -> print("hello every one!")
+print(self._words_to_say);
+}
+
+Person.class_variable = "here is class context"
+
 a, b = 1, 2
 b, a = a, b
 print(a)
