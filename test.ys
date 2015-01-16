@@ -3,17 +3,15 @@ print = (str) ->
 ;
 
 Base = class {
-init: (self) ->
-print("object created")
-# dont forget
-self;
+init: () ->
+print("object created");
 
-hello: (self) ->
-print("just hello");
+saySomething: () ->
+print("yo man! what's up?");
 }
 
 Person = class {
-init: (self, age) ->
+init: (age) ->
   print("called when object created")
   self._words_to_say = "nice to meet you!"
   self._age = age
@@ -21,9 +19,10 @@ init: (self, age) ->
   print(Person.class_variable)
   print(self)
   base = new Base()
-  self@base{init}
+  _self = self
+  a = _self@base{saySomething}
 ;
-hello: (self) -> print("hello every one!")
+hello: () -> print("hello every one!")
 print(self._words_to_say);
 }
 
@@ -37,13 +36,13 @@ true
 false
 nil
 (a)
+print("top self")
+print(self)
 person = new Person(23)
 person._favorite_programing_language ||= "yang"
-#person.inherited_method # -> Person -> BasePerson -> Object
 (person._nihao || person.hello)()
-print("lets try another way to call instance function")
-Person.hello(person)
-
+print(person)
+person.saySomething()
 if(person._age > 22)
 print("you need earn much money")
 else

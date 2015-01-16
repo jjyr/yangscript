@@ -213,7 +213,7 @@ module Yang
     def parse_class
       t = exp_node :class
       match :class
-      t.attrs[:content] = parse_object
+      t.attrs[:prototype] = parse_object
       t
     end
 
@@ -453,11 +453,14 @@ module Yang
       t.attrs[:object] = obj_exp
       t.attrs[:target] = primary_exp
       keys = []
-      match_pair(:lbrace, :rbrace) do
-        key = token_str
-        match :id
-        keys << key
-        match_one(:comma, :newline) if token != :rbrace
+      if token == :lbrace
+        match_pair(:lbrace, :rbrace) do
+          key = token_str
+          match :id
+          keys << key
+          match_one(:comma, :newline) if token != :rbrace
+        end
+        raise "delegate keys can not be empty" if keys.empty?
       end
       t.attrs[:keys] = keys
       t
@@ -491,6 +494,10 @@ module Yang
 
     def primary_exp
       case token
+      when :self
+        t = exp_node :self
+        match :self
+        t
       when :nil
         t = exp_node :literal
         t.attrs[:type] = :nil

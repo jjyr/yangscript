@@ -63,18 +63,12 @@ module Yang
         emit_break
       when :return
         emit_return node
-      when :print
-        emit_print node
-      when :class
-        emit_class node
       when :assign
         emit_assign node
       when :multiple_assign
         emit_multiple_assign node
       when :or_assign
         emit_or_assign node
-      when :define_function
-        emit_define_function node
       else
         emit_exp node
       end
@@ -97,7 +91,7 @@ module Yang
 
     def emit_return node
       write "return "
-      node.attrs[:val] and emit_exp node.attrs[:val]
+      emit_exp node.attrs[:val] if node.attrs[:val]
     end
 
     def emit_for node
@@ -166,12 +160,16 @@ module Yang
 
     def emit_exp node
       case node.kind
+      when :self
+        emit_self node
       when :literal
         emit_literal node
       when :id
         emit_id node
       when :access
         emit_access node
+      when :delegate
+        emit_delegate node
       when :operator
         emit_operator node
       when :call
@@ -182,11 +180,17 @@ module Yang
         emit_if node
       when :new
         emit_new node
+      when :class
+        emit_class node
       when :external
         emit_external node
       else
         raise "cannot detect exp kind: #{node.kind}"
       end
+    end
+
+    def emit_self node
+      write "this"
     end
 
     def emit_external node
@@ -205,19 +209,31 @@ module Yang
       emit_exp node.attrs[:class_exp]
     end
 
-    def emit_define_function node
-      var = node.attrs[:name]
-      write var
-      write "="
-      emit_lambda node
+    def emit_delegate node
+      write "function(){"
+      write "var obj="
+      emit_exp node.attrs[:object]
       write ";"
-      write "$def("
-      write node.outer.attrs[:name]
-      write ","
-      write_string "$#{var}"
-      write ","
-      write var
-      write ")"
+      write "var target="
+      emit_exp node.attrs[:target]
+      write ";"
+      keys = node.attrs[:keys]
+      if keys.size > 0
+        write "var keys="
+        write "["
+        write_list_items(keys) do |key|
+          write_string key
+        end
+        write "];"
+        write "for(var i=0;i<keys.length;i+=1){"
+        write "var key=keys[i];"
+      else
+        write "for(var key in target){"
+      end
+      write "obj[key]||(obj[key]=target[key]);"
+      write "}"
+      write "return obj;"
+      write "}()"
     end
 
     def emit_get_attr obj, attr
@@ -263,7 +279,7 @@ module Yang
     end
 
     def emit_exp_list list
-      write_list(list){|node| emit_exp(node)}
+      write_list_items(list){|node| emit_exp(node)}
     end
 
     def emit_function_call node
@@ -278,15 +294,13 @@ module Yang
     end
 
     def emit_get_attribute obj_exp, key
-      write "$get("
       if obj_exp.kind == :access
         emit_get_attribute obj_exp.attrs[:object], obj_exp.attrs[:attribute]
       else
         emit_exp obj_exp
       end
-      write ","
-      write_string "$#{key}"
-      write ")"
+      write "."
+      write key
     end
 
     def emit_instance_var_get obj, key
@@ -299,29 +313,19 @@ module Yang
 
     def emit_access node
       key = node.attrs[:attribute]
-      # start_with '_' means instance variable
-      if key.start_with? "_"
-        emit_instance_var_get node.attrs[:object], key
-      else
-        emit_get_attribute node.attrs[:object], key
-      end
+      emit_get_attribute node.attrs[:object], key
     end
 
 
     def emit_class node
-      class_name = node.attrs[:name]
-      write class_name
-      write "="
+      prototype = node.attrs[:prototype]
       write "function(){"
-      write "var "
-      write class_name
-      write " = $new_class("
-      write_string class_name
-      write ");"
-      emit_seq node.children[0]
-      write "return "
-      write class_name
-      write ";}()"
+      write "var klass=function(){this.init&&(this.init.apply(this, arguments));};"
+      write "klass.prototype="
+      emit_object prototype
+      write ";"
+      write "return klass;"
+      write "}()"
     end
 
     def emit_literal node
@@ -334,8 +338,8 @@ module Yang
         emit_array node
       when :string
         emit_string node
-      when :hash
-        emit_hash node
+      when :object
+        emit_object node
       when :bool
         emit_bool node
       when :nil
@@ -366,27 +370,22 @@ module Yang
       write "}"
     end
 
-    def write_list list
-      limit = list.size - 1
-      list.each_with_index do |elem, i|
+    def write_list_items items
+      limit = items.size - 1
+      items.each_with_index do |elem, i|
         yield elem
         write "," if i < limit
       end
     end
 
-    def emit_hash node
-      write "$_hash({"
-      node.attrs[:val].each do |k, v|
+    def emit_object node
+      write "{"
+      write_list_items(node.attrs[:val]) do |k, v|
         write_string k
         write ":"
         emit_exp v
-        write ","
       end
-      write "},"
-      write "["
-      write_list(node.attrs[:val].keys){|str| write_string str}
-      write "]"
-      write ")"
+      write "}"
     end
 
     def write_string str
@@ -416,13 +415,11 @@ module Yang
     end
 
     def emit_instance_var_set left, value
-      write "$set_ivar("
       emit_exp left.attrs[:object]
-      write ","
-      write_string "$#{left.attrs[:attribute]}"
-      write ","
+      write "."
+      write left.attrs[:attribute]
+      write "="
       emit_exp value
-      write ")"
     end
 
     def emit_left_assign left, value
@@ -452,18 +449,21 @@ module Yang
         write "," if values.size - 1 > i
       end
       write "];"
-      var_list.each do |var|
+      var_list.each_with_index do |var, i|
         write var.attrs[:name]
         write "="
         write t_var
-        write ".shift();"
+        write "["
+        write i
+        write "];"
       end
     end
 
     def emit_or_assign node
       emit_exp node.attrs[:left]
-      write "||"
+      write "||("
       emit_left_assign node.attrs[:left], node.attrs[:value]
+      write ")"
     end
 
     def emit_print node
