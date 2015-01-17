@@ -4,10 +4,11 @@ print = (str) ->
 
 Base = class {
 init: () ->
-print("object created");
+print("object created")
+self.words_to_say = "yo man! what's up?";
 
 saySomething: () ->
-print("yo man! what's up?");
+print(self.words_to_say);
 }
 
 Person = class {

@@ -230,7 +230,8 @@ module Yang
       else
         write "for(var key in target){"
       end
-      write "obj[key]||(obj[key]=target[key]);"
+      write "var attr=target[key];"
+      write "obj[key]||(obj[key]=(typeof(attr)=='function'?function(){attr.apply(target,arguments)}:attr));"
       write "}"
       write "return obj;"
       write "}()"
