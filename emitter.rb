@@ -25,7 +25,7 @@ module Yang
 
     def emit_env
       write "(function($env){"
-      write "var $_hash = $env._hash, $_bool = $env._bool, $new_class = $env.new_class, $def = $env.def, $get = $env.get_attribute, $set_ivar = $env.set_instance_var, $get_ivar = $env.get_instance_var;"
+      write "var $eq=$env.eq,$bool=$env.bool, $new_class = $env.new_class, $def = $env.def, $get = $env.get_attribute, $set_ivar = $env.set_instance_var, $get_ivar = $env.get_instance_var;"
       yield
       write "})(yangscript)"
     end
@@ -144,7 +144,7 @@ module Yang
           end
           break
         end
-        write "$_bool("
+        write "$bool("
         emit_exp(branch[:condition])
         write ")"
         write "?"
@@ -231,7 +231,8 @@ module Yang
         write "for(var key in target){"
       end
       write "var attr=target[key];"
-      write "obj[key]||(obj[key]=(typeof(attr)=='function'?function(){attr.apply(target,arguments)}:attr));"
+      write "var origin=obj[key];"
+      write "if(origin===null||origin===undefined)(obj[key]=(typeof(attr)==='function'?function(){attr.apply(target,arguments)}:attr));"
       write "}"
       write "return obj;"
       write "}()"
@@ -255,24 +256,43 @@ module Yang
       case op
       when :plus
         write "+"
-      when :or
-        write "||"
       when :gt
         write ">"
-      when :eq
-        write "==="
       else
         raise "cannot detect operator #{op}"
       end
+    end
+
+    def emit_eq_op left, right
+      write "$eq("
+      emit_exp left
+      write ","
+      emit_exp right
+      write ")"
+    end
+
+    def emit_or_op left, right
+      write "$bool("
+      emit_exp left
+      write ")||"
+      emit_exp right
     end
 
     def emit_operator node
       left = node.children[0]
       right = node.children[1]
       if right
-        emit_exp left
-        write_operator node.attrs[:operator]
-        emit_exp right
+        operator = node.attrs[:operator]
+        case operator
+        when :eq
+          emit_eq_op left, right
+        when :or
+          emit_or_op left, right
+        else
+          emit_exp left
+          write_operator operator
+          emit_exp right
+        end
       else
         write_operator node.attrs[:operator]
         emit_exp left
@@ -461,8 +481,9 @@ module Yang
     end
 
     def emit_or_assign node
+      write "$bool("
       emit_exp node.attrs[:left]
-      write "||("
+      write ")||("
       emit_left_assign node.attrs[:left], node.attrs[:value]
       write ")"
     end

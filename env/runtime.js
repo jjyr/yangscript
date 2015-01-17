@@ -136,17 +136,25 @@
   }
 
   // convert object to boolean
-  function _bool(obj){
-    if(obj === null || obj === false) {
+  function bool(obj){
+    if(obj === null || obj === false || obj === undefined) {
       return false
-    } else if(obj === undefined){
-      throw "object should not undefined"
+    // } else if(obj === undefined){
+    //   throw "object should not undefined"
     } else {
       return true
     }
   }
 
-  env._bool = _bool
+  env.bool = bool
+
+  function eq(left, right){
+    left = left === undefined ? null : left;
+    right = right === undefined ? null : right;
+    return left === right;
+  }
+
+  env.eq = eq
 
   // convert js object to yangscript hash
   function _hash(obj, keys){

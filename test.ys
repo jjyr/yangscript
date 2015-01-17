@@ -28,7 +28,8 @@ print(self._words_to_say);
 }
 
 Person.class_variable = "here is class context"
-
+print(Person.undef_key == nil) # true
+print(Person.class_variable == nil) # false
 a, b = 1, 2
 b, a = a, b
 print(a)
