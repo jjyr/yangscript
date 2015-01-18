@@ -383,19 +383,51 @@ module Yang
     end
 
     def emit_lambda node
-      write "function("
-      write node.attrs[:params].join(",")
-      write "){"
+      write "function(){"
       emit_variables_define node
+      i = 0
+      write_list_items(node.attrs[:params], "") do |param|
+        var = param[:name]
+        case param[:type]
+        when :normal
+          write var
+          write "="
+          write "arguments["
+          write i
+          write "];"
+        when :default
+          write var
+          write "="
+          write "arguments["
+          write i
+          write "];"
+          write "if("
+          write var
+          write "===undefined){"
+          write var
+          write "="
+          emit_exp param[:default_value]
+          write "}"
+        when :compress
+          write var
+          write "="
+          write "Array.prototype.slice.call(arguments,"
+          write i
+          write ");"
+        else
+          raise "unknow param type: #{param.inspect}"
+        end
+        i += 1
+      end
       emit_seq node.children[0]
       write "}"
     end
 
-    def write_list_items items
+    def write_list_items items, sep = ","
       limit = items.size - 1
       items.each_with_index do |elem, i|
         yield elem
-        write "," if i < limit
+        write sep if i < limit
       end
     end
 

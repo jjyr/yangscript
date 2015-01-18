@@ -11,7 +11,7 @@ module Yang
       @embed_lexer = EmbedLexer.new main, EXTERNAL_END
     end
 
-    def keep_state_during_embed &block
+    def keep_embed_state &block
       @embed_lexer.keep_state &block
     end
 

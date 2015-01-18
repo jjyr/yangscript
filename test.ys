@@ -2,6 +2,21 @@ print = (str) ->
   `console.log(@{`"output:" + @{str}`})`
 ;
 
+println = (str, line_end="#newline") ->
+  `console.log(@{str + line_end})`
+;
+
+println("test")
+println("test", ";")
+
+#testFunc = (arg1, arg2, *rest) ->
+#print(arg1)
+#print(arg2)
+#print(rest)
+#;
+
+#testFunc(1,2,3,4,5)
+
 Base = class {
 init: () ->
 print("object created")

@@ -280,6 +280,12 @@ module Yang
       t
     end
 
+    class FunctionParam
+      attr_accessor :type
+      def initialize
+      end
+    end
+
     def try_parse_function_param_list
       params = []
       sp = SafeParser.new self
@@ -289,8 +295,23 @@ module Yang
         if params.size != 0
           sp.match(:comma)
         end
-        params << token_str
+        param = {type: :normal}
+        if token == :star
+          match :star
+          param[:type] = :compress
+        end
+        param[:name] =  token_str
         sp.match(:id)
+        if token == :assign
+          match :assign
+          if param[:type] == :normal
+            param[:type] = :default
+          else
+            syntax_error
+          end
+          param[:default_value] = exp #should use sp
+        end
+        params << param
       end
       sp.match(:rparen)
 
@@ -357,34 +378,34 @@ module Yang
       t
     end
 
-    def keep_state_during_embed &block
-      @lexer.current_minor_lexer.keep_state_during_embed &block
+    def keep_embed_state &block
+      @lexer.current_minor_lexer.keep_embed_state &block
     end
 
     def parse_external
       t = exp_node :external
       @lexer.use_lexer_in_context :external_lexer do
-        match :backquote
-        contents = []
-        while token != :backquote
-          case token
-          when :external_fragment
-            fragment = exp_node :external_fragment
-            fragment.attrs[:content] = token_str
-            contents << fragment
-            match :external_fragment
-          else
-            match :at
-            match :lbrace
-            keep_state_during_embed do
+        keep_embed_state do
+          match :backquote
+          contents = []
+          while token != :backquote
+            case token
+            when :external_fragment
+              fragment = exp_node :external_fragment
+              fragment.attrs[:content] = token_str
+              contents << fragment
+              match :external_fragment
+            else
+              match :at
+              match :lbrace
               contents << exp
+              match :rbrace
             end
-            match :rbrace
           end
+          t.attrs[:contents] = contents
+          # skip next_token, to prevent external lexer match
+          match :backquote, false
         end
-        t.attrs[:contents] = contents
-        # skip next_token, to prevent external lexer match
-        match :backquote, false
       end
       next_token
       t
