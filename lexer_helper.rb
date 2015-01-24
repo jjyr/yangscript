@@ -8,8 +8,12 @@ module Yang
       c =~ /\A\d\z/
     end
 
-    def isalpha c
-      c =~ /\A[A-Za-z_]\z/
+    def isid c
+      (c =~ /\A[^\^\&\`\%\*\$\#\@\!\~\(\)\-\+\=\?\'\"\:\;\<\>\/\.\,\[\]\{\}\|\\]\z/) && !isblank(c)
+    end
+
+    def isidcap c
+      !isdigit(c) && isid(c)
     end
   end
 end

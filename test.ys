@@ -9,13 +9,13 @@ println = (str, line_end="#newline") ->
 println("test")
 println("test", ";")
 
-#testFunc = (arg1, arg2, *rest) ->
-#print(arg1)
-#print(arg2)
-#print(rest)
-#;
+testFunc = (arg1, arg2, *rest) ->
+print(arg1)
+print(arg2)
+print(rest)
+;
 
-#testFunc(1,2,3,4,5)
+testFunc(1,2,3,4,5)
 
 Base = class {
 init: () ->

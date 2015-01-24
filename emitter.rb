@@ -385,6 +385,12 @@ module Yang
     def emit_lambda node
       write "function(){"
       emit_variables_define node
+      least_params = node.attrs[:params].select{|p| p[:type] == :normal}.size
+      write "if(arguments.length<"
+      write least_params
+      write "){throw 'wrong number of arguments ('+arguments.length+' for "
+      write least_params
+      write ")'}"
       i = 0
       write_list_items(node.attrs[:params], "") do |param|
         var = param[:name]

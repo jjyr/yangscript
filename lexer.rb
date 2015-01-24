@@ -174,7 +174,7 @@ module Yang
         when :start
           if (isdigit(c))
             state = :innum
-          elsif (isalpha(c))
+          elsif (isidcap(c))
             state = :inid
           elsif (c == '"')
             save = false
@@ -269,7 +269,7 @@ module Yang
             state = :done
           end
         when :inid
-          if(!isalpha(c))
+          if(!isid(c))
             save = false
             put_char_back
             token = :id
