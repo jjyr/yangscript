@@ -1,0 +1,317 @@
+require('./common.js')
+require('./lexer_helper.js')
+require('./external_lexer.js')
+
+
+Token = class {
+  init: (token, tokenStr, currentTokenCharCount) ->
+    self.token = token
+    self.tokenStr = tokenStr
+    self.currentTokenCharCount = currentTokenCharCount
+  ;
+}
+
+LexerManager = class {
+  init: () ->
+    self.lexers = {}
+  ;
+
+  registerLexer: (name, lexer) ->
+    lexer.name = name
+    self.lexers[name] = lexer
+  ;
+
+  useLexer: (name) ->
+    self.currentLexer = self.lexers[name]
+    if(!self.currentLexer) throw "cannot find minor lexer #{name}";
+  ;
+
+  useLexerInContext: (name, contextRunner) ->
+    old = self.currentLexer
+    self.useLexer(name)
+    result = contextRunner()
+    self.useLexer(old.name)
+    result
+  ;
+}
+
+Scanner = class {
+  init: (source, options = {}) ->
+    self.line = {str: nil, index: 0, no: 0, size: 0}
+    self.currentTokenCharCount = 0
+    self.eof = false
+    self.source = source
+  ;
+
+  nextLine: () ->
+    line = self.line.str = self.source[self.line.no]
+    self.line.no += 1
+    if(line)
+      self.line.size = line.length
+      self.line.index = 0
+    else
+      self.eof = true
+    ;
+  ;
+
+  prevLine: () ->
+    if(self.eof) return;
+    self.line.no -= 1
+    line = self.line.str = self.source[self.line.no - 1]
+    if(line)
+      self.line.index = self.line.size = line.length
+    else
+      throw "cannot get previous line, line no: #{self.line.no}"
+    ;
+  ;
+
+  getNextChar: () ->
+    line = self.line
+    if(line.size > 0 && line.index == line.size)
+      line.index += 1
+      self.currentTokenCharCount += 1
+      "\\n"
+    elsif(line.index >= line.size)
+      self.nextLine()
+      if(!self.eof)
+        line.index += 1
+        self.currentTokenCharCount += 1
+        line.str[line.index - 1]
+      else
+        nil
+      ;
+    else
+      self.currentTokenCharCount += 1
+      line.index += 1
+      line.str[line.index - 1]
+    ;
+  ;
+
+  putCharBack: () ->
+    if(!self.eof)
+      self.line.index -= 1
+      self.currentTokenCharCount -= 1
+      if(self.line.index == 0) self.prevLine();
+    ;
+  ;
+}
+
+Lexer = class {
+  init: (source) ->
+    self.scanner = new Scanner(source)
+    self.manager = new lexerManager()
+    self.manager.registerLexer("main", new MainLexer(self))
+    self.manager.registerLexer("external", new ExternalLexer(self))
+    self.lastToken = nil
+  ;
+
+  getToken: () ->
+    self.lastToken.token
+  ;
+
+  getTokenStr: () ->
+    self.lastToken.tokenStr
+  ;
+
+  getTokenInstance: () ->
+    self.lastToken
+  ;
+
+  nextToken: () ->
+    token = tokenStr = nil
+    self.scanner.resetCharCount()
+    token, tokenStr = *self.manager.currentLexer.nextToken()
+    this.lastToken = new Token(token, tokenStr, self.scanner.currentTokenCharCount)
+  ;
+
+  backToken: () ->
+    for self.lastToken.currentTokenCharCount
+      self.putCharBack
+    ;
+  ;
+
+  setToken: (token) ->
+    self.lastToken = token
+  ;
+
+  retoken: () ->
+    self.backToken()
+    self.nextToken()
+  ;
+}
+
+MainLexer = class {
+  init: (lexer) ->
+    self@lexerHelper.helper@lexer.scanner{getNextChar, putCharBack}
+  ;
+  nextToken: () ->
+    state = "start"
+    save = true
+    token = nil
+    tokenStr = ""
+
+    while(state != "done")
+      c = self.getNextChar()
+      save = true
+      case state
+      when "start"
+        if(self.isdigit(c))
+          state = "innum"
+        elsif (self.self.isidcap(c))
+          state = "inid"
+        elsif (c == '"')
+          save = false
+          state = "instr"
+        elsif (c == '=')
+          state = "ineq"
+        elsif(c == '&')
+          state = "inand"
+        elsif(c == '|')
+          state = "inor"
+        elsif(c == '-')
+          state = "inarrow"
+        elsif(self.isblank(c))
+          save = false
+        elsif (c == '#')
+          save = false
+          state = "incomment"
+        else
+          state = "done"
+          case c
+          when nil
+            save = false
+            token = "endfile"
+          when '`'
+            token = "backquote"
+          when '@'
+            token = "at"
+          when '<'
+            token = "lt"
+          when '>'
+            token = "gt"
+          when '('
+            token = "lparen"
+          when ')'
+            token = "rparen"
+          when '['
+            token = "lbracket"
+          when ']'
+            token = "rbracket"
+          when '{'
+            token = "lbrace"
+          when '}'
+            token = "rbrace"
+          when '+'
+            token = "plus"
+          when '*'
+            token = "star"
+          when '/'
+            token = "slash"
+          when '%'
+            token = "mod"
+          when ','
+            token = "comma"
+          when '.'
+            token = "dot"
+          when ':'
+            token = "colon"
+          when ';'
+            token = "semi"
+          when '\n'
+            token = "newline"
+          when '!'
+            state = "not"
+          else
+            throw "unexpected char #{c}"
+          ;
+        ;
+      when "incomment"
+        save = false
+        if(!c)
+          state = "done"
+          token = "endfile"
+        elsif (c == "\\n")
+          save = true
+          state = "done"
+          token = "newline"
+        ;
+      when "ineq"
+        state = "done"
+        if(c == '=')
+          token = "eq"
+        else
+          self.putCharBack()
+          save = false
+          token = "assign"
+        ;
+      when "innum"
+        if(!self.isdigit(c))
+          save = false
+          self.putCharBack()
+          token = "num"
+          state = "done"
+        ;
+      when "inid"
+        if(!self.isid(c))
+          save = false
+          self.putCharBack()
+          token = "id"
+          state = "done"
+        ;
+      when "instr"
+        if(c == '"')
+          save = false
+          token = "string"
+          state = "done"
+        ;
+      when "inand"
+        state = "done"
+        if(c == '&')
+          token = "and"
+        else
+          save = false
+          token = "b_and"
+        ;
+      when "inor"
+        if(c == '|')
+          state = "inor_assign"
+        else
+          state = "done"
+          save = false
+          token = "b_or"
+        ;
+      when "inarrow"
+        state = "done"
+        if(c == '>')
+          token = "arrow"
+        else
+          self.putBackChar()
+          save = false
+          token = "dash"
+        ;
+      when "inor_assign"
+        state = "done"
+        if(c == '=')
+          token = "or_assign"
+        else
+          save = false
+          token = "or"
+        ;
+      else
+        throw "Scanner error, state: #{state}"
+      ;
+
+      if(save) tokenStr += c;
+
+      if(state == "done")
+        token = self.reservedLookup(tokenStr) if token == "id"
+      ;
+    ;
+
+    [token, tokenStr]
+  ;
+
+  reservedLookup: (id) ->
+    common.ReservedWords[id] || "id"
+  ;
+}

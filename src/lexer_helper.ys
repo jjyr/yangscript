@@ -1,0 +1,20 @@
+lexerHelper = {
+  isblank: (c) ->
+    /\A\s\z/.test(c)
+  ;
+
+  isdigit: (c) ->
+    /\A\d\z/.test(c)
+  ;
+
+  isid: (c) ->
+    idAllowed = /\A[^\^\&\`\%\*\$\#\@\!\~\(\)\-\+\=\?\'\"\:\;\<\>\/\.\,\[\]\{\}\|\\]\z/.test(c)
+    idAllowed && !self.isblank(c)
+  ;
+
+  isidcap: (c) ->
+    !self.isidcap(c) && self.isid(c)
+  ;
+}
+
+exports.helper = lexerHelper

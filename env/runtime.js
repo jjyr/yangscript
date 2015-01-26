@@ -167,4 +167,4 @@
   env._hash = _hash
 
   global.yangscript = env;
-})(this);
+})((typeof global == "undefined") ? this : global);
