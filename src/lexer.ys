@@ -23,7 +23,7 @@ LexerManager = class {
 
   useLexer: (name) ->
     self.currentLexer = self.lexers[name]
-    if(!self.currentLexer) throw "cannot find minor lexer #{name}";
+    if(!self.currentLexer) throw "cannot find lexer '#{name}'";
   ;
 
   useLexerInContext: (name, contextRunner) ->
