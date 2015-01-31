@@ -272,30 +272,57 @@ module Yang
     end
 
     def emit_or_op left, right
-      write "$bool("
+      write "function(){"
+      write "var result="
       emit_exp left
-      write ")||"
+      write ";"
+      write "if(!$bool(result)){result="
       emit_exp right
+      write ";}"
+      write "return result;"
+      write "}()"
+    end
+
+    def emit_and_op left, right
+      write "function(){"
+      write "var result="
+      emit_exp left
+      write ";"
+      write "if($bool(result)){result="
+      emit_exp right
+      write ";}"
+      write "return result;"
+      write "}()"
+    end
+
+    def emit_not_op value
+      write "!$bool("
+      emit_exp value
+      write ")"
     end
 
     def emit_operator node
       left = node.children[0]
       right = node.children[1]
-      if right
-        operator = node.attrs[:operator]
-        case operator
-        when :eq
-          emit_eq_op left, right
-        when :or
-          emit_or_op left, right
-        else
+      operator = node.attrs[:operator]
+      case operator
+      when :eq
+        emit_eq_op left, right
+      when :or
+        emit_or_op left, right
+      when :and
+        emit_and_op left, right
+      when :not
+        emit_not_op left
+      else
+        if right
           emit_exp left
           write_operator operator
           emit_exp right
+        else
+          write_operator operator
+          emit_exp left
         end
-      else
-        write_operator node.attrs[:operator]
-        emit_exp left
       end
     end
 
@@ -359,6 +386,8 @@ module Yang
         emit_array node
       when :string
         emit_string node
+      when :regexp
+        emit_regexp node
       when :object
         emit_object node
       when :bool
@@ -455,6 +484,12 @@ module Yang
 
     def emit_string node
       write_string node.attrs[:val]
+    end
+
+    def emit_regexp node
+      write "/"
+      write node.attrs[:val]
+      write "/"
     end
 
     def emit_array node

@@ -24,7 +24,7 @@ module Yang
     mod: 5
   }
 
-  UNARY_OP = [:plus, :dash]
+  UNARY_OP = [:plus, :dash, :not]
 
   module ParserHelper
     def stmt_node kind
@@ -237,18 +237,22 @@ module Yang
 
     def parse_assignment left_list
       match :assign
-      right_values = parse_exp_list
       if left_list.size == 1
         t = stmt_node :assign
-        t.attrs[:left] = left_list[0]
-        values = right_values
-        raise_error("right side more than 1 value") if values.size != 1
-        t.attrs[:value] = values[0]
+        value = exp
+        while token == :assign
+          match :assign
+          left_list << value
+          value = nil
+        end
+        raise_error("right side more than 1 value") if token == :comma
+        t.attrs[:value] = value
+        t.attrs[:left_list] = left_list
         t
       else
         t = stmt_node :multiple_assign
         t.attrs[:left_list] = left_list
-        t.attrs[:values] = right_values
+        t.attrs[:values] = parse_exp_list
         t
       end
     end
@@ -353,7 +357,7 @@ module Yang
       value = {}
       match_pair(:lbrace, :rbrace) do
         key = token_str
-        match :id
+        match_one :id, *RESERVED_WORDS.values
         match :colon
         value[key] = exp
         match_one(:comma, :newline) if token != :rbrace
@@ -424,14 +428,13 @@ module Yang
 
     def subexp limit
       if is_unary_op(token)
-        match token
         t = exp_node :operator
         t.attrs[:operator] = token
-        t.children[0] = primary_exp
-        return t
+        match token
+        t.children[0] = suffixed_exp
+      else
+        t = suffixed_exp
       end
-
-      t = suffixed_exp
       op_prior = get_op_prior token
       while op_prior && op_prior > limit
         op_node = exp_node :operator
@@ -548,10 +551,16 @@ module Yang
         t.attrs[:val] = token_str
         match :string
         t
+      when :regexp
+        t = exp_node :literal
+        t.attrs[:type] = :regexp
+        t.attrs[:val] = token_str
+        match :regexp
+        t
       when :lbracket
         parse_array
       when :lbrace
-        parse_hash
+        parse_object
       when :class
         parse_class
       when :new

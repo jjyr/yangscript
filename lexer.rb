@@ -179,6 +179,12 @@ module Yang
           elsif (c == '"')
             save = false
             state = :instr
+          elsif (c == "'")
+            save = false
+            state = :inestr
+          elsif(c == '/')
+            save = false
+            state = :inregexp
           elsif (c == '=')
             state = :ineq
           elsif(c == '&')
@@ -237,7 +243,7 @@ module Yang
             when '\n'
               token = :newline
             when '!'
-              state = :not
+              token = :not
             else
               token = :error
             end
@@ -275,12 +281,35 @@ module Yang
             token = :id
             state = :done
           end
-        when :instr
-          if(c == '"')
+        when :inestr
+          if c == '\\'
+            state = :inescape
+            pre_state = :inregexp
+          elsif(c == "'")
             save = false
             token = :string
             state = :done
           end
+        when :instr
+          if c == '\\'
+            state = :inescape
+            pre_state = :inregexp
+          elsif(c == '"')
+            save = false
+            token = :string
+            state = :done
+          end
+        when :inregexp
+          if c == '\\'
+            state = :inescape
+            pre_state = :inregexp
+          elsif(c == '/')
+            save = false
+            token = :regexp
+            state = :done
+          end
+        when :inescape
+          state, pre_state = pre_state, nil
         when :inand
           state = :done
           if(c == '&')
