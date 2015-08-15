@@ -2,7 +2,7 @@
 
 YangScript is a programming language
 
-It is still in development
+~~It is still in development~~
 
 Checkout [here](test.ys) for current supported syntax
 
